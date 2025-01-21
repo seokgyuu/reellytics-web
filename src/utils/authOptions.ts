@@ -6,7 +6,6 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
     try {
       const url = `${process.env.KEYCLOAK_ISSUER}/protocol/openid-connect/token`;
   
-      // refresh_token이 문자열이 아닌 경우 에러 처리
       if (typeof token.refreshToken !== 'string') {
         throw new Error('Invalid refresh token');
       }
@@ -15,7 +14,7 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
         grant_type: 'refresh_token',
         client_id: process.env.KEYCLOAK_ID as string,
         client_secret: process.env.KEYCLOAK_SECRET as string,
-        refresh_token: token.refreshToken, // 문자열로 보장
+        refresh_token: token.refreshToken, 
       };
   
       const urlencoded = new URLSearchParams(body);
@@ -60,7 +59,6 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async jwt({ token, user, account }) {
-      // 초기 로그인 처리
       if (user && account) {
         return {
           ...token,
@@ -72,12 +70,10 @@ export const authOptions: NextAuthOptions = {
         };
       }
 
-      // Access Token이 만료되지 않은 경우
       if (Date.now() < (token.accessTokenExpires as number)) {
         return token;
       }
 
-      // Access Token 갱신
       return refreshAccessToken(token);
     },
     async session({ session, token }) {

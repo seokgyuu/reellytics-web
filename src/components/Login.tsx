@@ -1,7 +1,7 @@
 // 'use client';
 
 // import { signIn, signOut } from 'next-auth/react';
-// import { NextAuthSession } from '@/app/api/auth/[...nextauth]/route';
+// import { NextAuthSession } from '@/utils/authOptions';
 
 // export default function Login({
 // 	session,

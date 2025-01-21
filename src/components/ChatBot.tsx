@@ -1,65 +1,130 @@
 "use client";
 
-import React, { useState } from "react";
-import { fetchGPT } from "@/utils/fetchGPT";
-import "@/style/chatbot.css"; 
+import React, { useState, useEffect, useRef } from "react";
+import { marked } from "marked";
+import { v4 as uuidv4 } from "uuid";
 
-export default function ChatBot() {
-  const [messages, setMessages] = useState<{ sender: string; text: string }[]>([]);
-  const [input, setInput] = useState<string>("");
+const ChatBot: React.FC = () => {
+  const chatLogRef = useRef<HTMLDivElement>(null);
+  const [messages, setMessages] = useState<{ sender: string; text: string }[]>([
+    { sender: "AI", text: "안녕하세요! 무엇을 도와드릴까요?" },
+  ]);
+  const [userInput, setUserInput] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  const handleSend = async () => {
-    if (!input.trim()) return;
-    setMessages((prev) => [...prev, { sender: "user", text: input }]);
-    setInput("");
-    setIsLoading(true);
+  // 세션 ID 생성
+  const sessionId = useState<string>(() => {
+    const storedSession = sessionStorage.getItem("session_id");
+    if (storedSession) return storedSession;
+    const newSessionId = uuidv4();
+    sessionStorage.setItem("session_id", newSessionId);
+    return newSessionId;
+  })[0];
 
+  // 스크롤 동작
+  useEffect(() => {
+    if (chatLogRef.current) {
+      chatLogRef.current.scrollTop = chatLogRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  // API 호출
+  const fetchGPTResponse = async (input: string) => {
     try {
-      const response = await fetchGPT(input);
-      setMessages((prev) => [...prev, { sender: "GPT", text: response }]);
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        { sender: "GPT", text: "Error fetching response." },
-      ]);
-    } finally {
-      setIsLoading(false);
+      const apiUrl = ""; // API 추가
+
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: input,
+          session_id: sessionId,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch GPT response");
+      }
+
+      const data = await response.json();
+      return data.reply || "응답을 받지 못했습니다.";
+    } catch (error) {
+      console.error("Error fetching GPT response:", error);
+      return "서버 연결에 실패했습니다. 나중에 다시 시도해주세요.";
     }
   };
 
+  // 사용자 메시지 
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userInput.trim()) return;
+
+    const userMessage = { sender: "사용자", text: userInput };
+    setMessages((prev) => [...prev, userMessage]);
+    setUserInput("");
+    setIsLoading(true);
+
+    const gptMessage = await fetchGPTResponse(userInput);
+    setMessages((prev) => [...prev, { sender: "AI", text: gptMessage }]);
+    setIsLoading(false);
+  };
+
   return (
-    <div className="chatbot-container">
-      <h1 className="chatbot-header">ReelStatics</h1>
-      <div className="chatbot-messages">
+    <div
+      id="Chatbot"
+      className="absolute top-[100px] left-0 right-0 bottom-0 flex flex-col max-w-[1280px] h-[calc(100vh-100px)] bg-white overflow-hidden z-10 mx-auto sm:w-[95%]"
+    >
+      <div
+        id="chat-log"
+        ref={chatLogRef}
+        className="flex-grow overflow-y-auto p-4 text-sm leading-6 flex flex-col justify-start"
+      >
         {messages.map((msg, index) => (
           <div
             key={index}
-            className={`chatbot-message ${
-              msg.sender === "user" ? "chatbot-user" : "chatbot-gpt"
-            }`}
+            className={`${
+              msg.sender === "사용자"
+                ? "bg-green-100 self-end"
+                : "bg-gray-200 self-start"
+            } p-2 rounded-2xl max-w-[80%] mb-2 whitespace-pre-wrap`}
           >
-            {msg.text}
+            {msg.sender === "AI" ? (
+              <div
+                dangerouslySetInnerHTML={{ __html: marked(msg.text) }}
+                className="prose"
+              />
+            ) : (
+              msg.text
+            )}
           </div>
         ))}
-        {isLoading && <div className="chatbot-typing">Typing...</div>}
+        {isLoading && (
+          <div className="flex items-center justify-center">
+            <div className="spinner"></div>
+          </div>
+        )}
       </div>
-      <div className="chatbot-input-container">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Type your message"
-          className="chatbot-input"
+      <form
+        onSubmit={handleFormSubmit}
+        className="flex p-2 border-t border-gray-300 bg-white items-center"
+      >
+        <textarea
+          value={userInput}
+          onChange={(e) => setUserInput(e.target.value)}
+          placeholder="메시지를 입력하세요"
+          className="flex-grow p-2 rounded-2xl bg-gray-100 focus:outline-none"
+          disabled={isLoading}
         />
         <button
-          onClick={handleSend}
-          className="chatbot-button"
+          type="submit"
           disabled={isLoading}
+          className="ml-2 px-4 py-2 bg-black text-white rounded-2xl hover:bg-gray-800 transition disabled:bg-gray-400"
         >
-          {isLoading ? "Sending..." : "Send"}
+          {isLoading ? "전송 중..." : "전송"}
         </button>
+      </form>
       </div>
-    </div>
   );
-}
+};
+
+export default ChatBot;
