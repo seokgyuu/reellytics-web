@@ -1,53 +1,39 @@
-import { NextAuthOptions } from 'next-auth';
-import KeycloakProvider from 'next-auth/providers/keycloak';
+import { NextAuthOptions, Session } from 'next-auth';
 import { JWT } from 'next-auth/jwt';
+import KeycloakProvider from 'next-auth/providers/keycloak';
 
-async function refreshAccessToken(token: JWT): Promise<JWT> {
-    try {
-      const url = `${process.env.KEYCLOAK_ISSUER}/protocol/openid-connect/token`;
-  
-      if (typeof token.refreshToken !== 'string') {
-        throw new Error('Invalid refresh token');
-      }
-  
-      const body = {
-        grant_type: 'refresh_token',
-        client_id: process.env.KEYCLOAK_ID as string,
-        client_secret: process.env.KEYCLOAK_SECRET as string,
-        refresh_token: token.refreshToken, 
-      };
-  
-      const urlencoded = new URLSearchParams(body);
-  
-      const response = await fetch(url, {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        method: 'POST',
-        body: urlencoded,
-      });
-  
-      const refreshedTokens = await response.json();
-  
-      if (!response.ok) throw refreshedTokens;
-  
-      return {
-        ...token,
-        accessToken: refreshedTokens.access_token,
-        refreshToken: refreshedTokens.refresh_token ?? token.refreshToken,
-        accessTokenExpires: Date.now() + refreshedTokens.expires_in * 1000,
-      };
-    } catch (error) {
-      console.error('Error refreshing access token:', error);
-  
-      return {
-        ...token,
-        error: 'RefreshAccessTokenError',
-      };
-    }
-  }
-  
+interface ExtendedJWT extends JWT {
+  accessToken?: string;
+  refreshToken?: string;
+  accessTokenExpires?: number;
+  error?: string;
+  id_token?: string;
+  user?: {
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+  }; 
+}
 
+export interface NextAuthSession extends Session {
+  accessToken?: string;
+  error?: string;
+  user?: {
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+  }; 
+}
+
+// session 콜백에서 undefined 값을 기본 처리
+async function session({ session, token }: { session: NextAuthSession; token: ExtendedJWT }) {
+  session.user = token.user; // undefined 처리
+  session.accessToken = token.accessToken;
+  session.error = token.error;
+  return session;
+}
+
+// NextAuth 설정
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   providers: [
@@ -58,33 +44,25 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user, account }) {
+    jwt: async ({ token, user, account }) => {
+      const extendedToken = token as ExtendedJWT;
       if (user && account) {
         return {
-          ...token,
+          ...extendedToken,
           accessToken: account.access_token,
           refreshToken: account.refresh_token,
-          accessTokenExpires: Date.now() + account.expires_at! * 1000,
+          accessTokenExpires: Date.now() + (account.expires_at ?? 0) * 1000,
           id_token: account.id_token,
           user,
         };
       }
 
-      if (Date.now() < (token.accessTokenExpires as number)) {
-        return token;
+      if (extendedToken.accessTokenExpires && Date.now() < extendedToken.accessTokenExpires) {
+        return extendedToken;
       }
 
-      return refreshAccessToken(token);
+      return extendedToken;
     },
-    async session({ session, token }) {
-      session.accessToken = token.accessToken as string;
-      session.error = token.error as string;
-      session.user = token.user as {
-        name?: string | null;
-        email?: string | null;
-        image?: string | null;
-      };
-      return session;
-    },
+    session,
   },
 };

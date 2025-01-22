@@ -13,6 +13,11 @@
     "@tailwindcss/line-clamp": "^0.4.4",
     "@tailwindcss/typography": "^0.5.16",
     "autoprefixer": "^10.4.20",
+    "axios": "^1.7.9",
+    "body-parser": "^1.20.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
     "marked": "^15.0.6",
     "next": "15.1.4",
     "next-auth": "^4.24.11",
@@ -21,6 +26,9 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@types/body-parser": "^1.19.5",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
     "@types/marked": "^5.0.2",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -31,5 +39,19 @@
     "postcss": "^8.5.1",
     "tailwindcss": "^3.4.17",
     "typescript": "^5"
-  }
+  },
+  "description": "This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/seokgyuu/reellytics-web.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/seokgyuu/reellytics-web/issues"
+  },
+  "homepage": "https://github.com/seokgyuu/reellytics-web#readme"
 }

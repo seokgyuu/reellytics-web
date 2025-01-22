@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import axios from "axios";
 import { marked } from "marked";
 import { v4 as uuidv4 } from "uuid";
 
@@ -28,33 +29,24 @@ const ChatBot: React.FC = () => {
     }
   }, [messages]);
 
-  // API 호출
-  const fetchGPTResponse = async (input: string) => {
+  // AI API 호출 함수
+  const fetchGPTResponse = async (input: string): Promise<string> => {
     try {
-      const apiUrl = ""; // API 추가
+      const apiUrl = "http://localhost:5000/chat"; // 서버 URL
 
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: input,
-          session_id: sessionId,
-        }),
+      const response = await axios.post(apiUrl, {
+        message: input,
+        session_id: sessionId,
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch GPT response");
-      }
-
-      const data = await response.json();
-      return data.reply || "응답을 받지 못했습니다.";
+      return response.data.response || "응답을 받지 못했습니다.";
     } catch (error) {
       console.error("Error fetching GPT response:", error);
       return "서버 연결에 실패했습니다. 나중에 다시 시도해주세요.";
     }
   };
 
-  // 사용자 메시지 
+  // 사용자 메시지 처리
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!userInput.trim()) return;
@@ -123,7 +115,7 @@ const ChatBot: React.FC = () => {
           {isLoading ? "전송 중..." : "전송"}
         </button>
       </form>
-      </div>
+    </div>
   );
 };
 
