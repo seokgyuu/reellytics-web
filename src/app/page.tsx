@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Header from '@/components/Header';
 import ChatBot from '@/components/ChatBot';
 import { useSession } from 'next-auth/react';
+import { FaSpinner } from 'react-icons/fa'; 
 
 export default function Page() {
   const { data: session, status } = useSession();
@@ -23,9 +24,13 @@ export default function Page() {
     }
   };
 
-  // 이미지로 변경해야할듯
+  // 로딩 상태
   if (status === 'loading') {
-    return <div>로딩중 입니다.</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <FaSpinner className="animate-spin text-gray-600 text-4xl" />
+      </div>
+    );
   }
 
   return (

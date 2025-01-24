@@ -1,4 +1,4 @@
-import express from "express"; // express 전체를 import
+import express from "express"; 
 import cors from "cors";
 import bodyParser from "body-parser";
 import axios from "axios";
@@ -26,26 +26,26 @@ app.use(cors());
 app.use(bodyParser.json());
 
 // OpenAI API 키 로드
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const OPENAI_API_KEY = '';
 
 if (!OPENAI_API_KEY) {
-  throw new Error("OPENAI_API_KEY가 설정되지 않았습니다. .env 파일을 확인하세요.");
+  throw new Error("설정되지 않았습니다..");
 }
 
 // POST /chat 엔드포인트
 app.post(
   "/chat",
   async (req: express.Request, res: express.Response) => {
-    const { query, session_id } = req.body as ChatRequestBody; // req.body를 ChatRequestBody로 캐스팅
+    const { query, session_id } = req.body as ChatRequestBody; 
 
     console.log(`Received message: ${query}, Session ID: ${session_id}`);
 
     try {
       // OpenAI API 호출
       const response = await axios.post<OpenAIResponse>(
-        "https://api.openai.com/v1/chat/completions",
+        "",
         {
-          model: "gpt-3.5-turbo",
+          model: "",
           messages: [{ role: "user", content: query }],
           max_tokens: 150,
           temperature: 0.9,

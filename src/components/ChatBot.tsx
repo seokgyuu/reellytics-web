@@ -41,7 +41,7 @@ const ChatBot: React.FC = () => {
   // AI API 호출 함수
   const fetchGPTResponse = async (input: string): Promise<string> => {
     try {
-      const apiUrl = "http://localhost:5000/chat"; // 서버 URL
+      const apiUrl = "http://localhost:5000/chat"; // chat 서버
 
       const response = await axios.post(apiUrl, {
         query: input,
