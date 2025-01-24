@@ -4,7 +4,7 @@ import bodyParser from "body-parser";
 import axios from "axios";
 import dotenv from "dotenv";
 
-dotenv.config(); // 환경 변수 로드
+dotenv.config(); 
 
 const app = express();
 const PORT = 5000;
@@ -37,9 +37,9 @@ app.post(
     try {
       // OpenAI API 호출
       const response = await axios.post<OpenAIResponse>(
-        "https://api.openai.com/v1/chat/completions",
+        "",
         {
-          model: "gpt-3.5-turbo",
+          model: "",
           messages: [{ role: "user", content: query }],
           max_tokens: 150,
           temperature: 0.9,
