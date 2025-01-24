@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "typeRoots": ["./node_modules/@types", "./src/types"], // 타입 정의 위치 추가
+    "typeRoots": ["./node_modules/@types", "./src/types"], 
     "target": "ES2017",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
