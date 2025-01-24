@@ -22,7 +22,7 @@ const Header: React.FC<NavProps> = ({ currentView, onNavClick, session, children
           </div>
           <nav className="header__nav">
             <ul className="flex items-center">
-              {/* Chatbot 메뉴 */}
+              
               <li className="ml-6">
                 <a
                   href="#"
@@ -34,7 +34,6 @@ const Header: React.FC<NavProps> = ({ currentView, onNavClick, session, children
                   Chatbot
                 </a>
               </li>
-              {/* 로그인 및 로그아웃 버튼 */}
               <li className="ml-6">
                 {session ? (
                   <button
@@ -51,7 +50,6 @@ const Header: React.FC<NavProps> = ({ currentView, onNavClick, session, children
                     >
                       Login
                     </button>
-                    {/* Terms of Use */}
                     <div className="relative group">
                       <div className="flex items-center relative">
                         <span className="text-gray-700 transition-all hover:text-black cursor-pointer">

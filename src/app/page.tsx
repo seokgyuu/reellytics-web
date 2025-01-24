@@ -1,35 +1,36 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Header from '@/components/Header';
 import ChatBot from '@/components/ChatBot';
 import { useSession } from 'next-auth/react';
 
 export default function Page() {
-  const [currentView, setCurrentView] = useState<string>('chatbot');
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
 
-  // 브라우저 환경에서만 `sessionStorage` 사용
-  useEffect(() => {
+  const [currentView, setCurrentView] = useState<string>(() => {
     if (typeof window !== 'undefined') {
-      const savedView = sessionStorage.getItem('currentView');
-      if (savedView) {
-        setCurrentView(savedView);
-      }
+      return sessionStorage.getItem('currentView') || 'chatbot';
     }
-  }, []);
+    return 'chatbot';
+  });
 
+  //sessionStorage에 저장
   const handleNavClick = (view: string) => {
     setCurrentView(view);
-
     if (typeof window !== 'undefined') {
-      sessionStorage.setItem('currentView', view); // 브라우저 환경에서만 저장
+      sessionStorage.setItem('currentView', view);
     }
   };
 
+  // 이미지로 변경해야할듯
+  if (status === 'loading') {
+    return <div>로딩중 입니다.</div>;
+  }
+
   return (
     <Header currentView={currentView} onNavClick={handleNavClick} session={session}>
-      {currentView === 'chatbot' && <ChatBot />}
+      {currentView === 'chatbot' ? <ChatBot /> : <div>현재 지원하지 않는 뷰입니다.</div>}
     </Header>
   );
 }

@@ -7,9 +7,13 @@ import { v4 as uuidv4 } from "uuid";
 
 const ChatBot: React.FC = () => {
   const chatLogRef = useRef<HTMLDivElement>(null);
-  const [messages, setMessages] = useState<{ sender: string; text: string }[]>([
-    { sender: "AI", text: "안녕하세요! 무엇을 도와드릴까요?" },
-  ]);
+  const [messages, setMessages] = useState<{ sender: string; text: string }[]>(() => {
+    // 컴포넌트가 마운트될 때 sessionStorage에서 로그 복원
+    const storedMessages = sessionStorage.getItem("chat_log");
+    return storedMessages
+      ? JSON.parse(storedMessages)
+      : [{ sender: "AI", text: "안녕하세요! 무엇을 도와드릴까요?" }];
+  });
   const [userInput, setUserInput] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
@@ -29,13 +33,18 @@ const ChatBot: React.FC = () => {
     }
   }, [messages]);
 
+  // 채팅 로그를 sessionStorage에 저장
+  useEffect(() => {
+    sessionStorage.setItem("chat_log", JSON.stringify(messages));
+  }, [messages]);
+
   // AI API 호출 함수
   const fetchGPTResponse = async (input: string): Promise<string> => {
     try {
       const apiUrl = "http://localhost:5000/chat"; // 서버 URL
 
       const response = await axios.post(apiUrl, {
-        message: input,
+        query: input,
         session_id: sessionId,
       });
 

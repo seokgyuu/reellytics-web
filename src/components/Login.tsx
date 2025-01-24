@@ -10,10 +10,10 @@ export default function Login({
 }) {
   // 세션 에러가 있는 경우 자동 로그아웃
   if (session?.error) {
-    console.error('Session error detected:', session.error);
+    console.error('Session error:', session.error);
     signOut()
-      .then(() => console.log('Logged out due to session error'))
-      .catch((err) => console.error('Error during sign out:', err));
+      .then(() => console.log('세션 에러로 인해 로그아웃'))
+      .catch((err) => console.error('로그아웃중 에러 발생:', err));
   }
 
   // 세션이 있는 경우
@@ -25,14 +25,14 @@ export default function Login({
           className="mb-4 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
           onClick={() =>
             signOut()
-              .then(() => console.log('Logged out successfully'))
-              .catch((err) => console.error('Error during sign out:', err))
+              .then(() => console.log('성공적으로 로그아웃되었습니다'))
+              .catch((err) => console.error('로그아웃 중 에러 발생:', err))
           }
         >
           Sign Out
         </button>
         <div>
-          <h2 className="text-sm font-medium mb-2">Session Details:</h2>
+          <h2 className="text-sm font-medium mb-2">정보 :</h2>
           <pre className="bg-gray-50 p-2 rounded text-sm">
             {JSON.stringify(session, null, 2)}
           </pre>
@@ -49,8 +49,8 @@ export default function Login({
         className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
         onClick={() =>
           signIn('keycloak')
-            .then(() => console.log('Sign in initiated'))
-            .catch((err) => console.error('Error during sign in:', err))
+            .then(() => console.log('로그인 시작'))
+            .catch((err) => console.error('로그인중 에러 발생:', err))
         }
       >
         Sign In with Keycloak
