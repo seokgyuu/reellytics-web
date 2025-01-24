@@ -1,7 +1,7 @@
 import { authOptions } from '@/utils/authOptions';
 import { getServerSession } from 'next-auth';
 
-async function fetchWithToken(url: string, init?: { headers?: {} }) {
+async function fetchWithToken(url: string, init?: RequestInit) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -23,7 +23,8 @@ async function fetchWithToken(url: string, init?: { headers?: {} }) {
     }
 
     return response.json();
-  } catch {
+  } catch (error) {
+    console.error('API 요청 중 오류 발생:', error);
     return 'Logout status';
   }
 }
