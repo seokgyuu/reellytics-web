@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
     email: token.email,
     picture: token.picture,
     accessToken: token.accessToken,
+    refreshToken: token.refreshToken,
     accessTokenExpires: token.accessTokenExpires,
   };
 
