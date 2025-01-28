@@ -16,7 +16,7 @@ export default function Page() {
     return 'chatbot';
   });
 
-  //sessionStorage에 저장
+  // sessionStorage에 저장
   const handleNavClick = (view: string) => {
     setCurrentView(view);
     if (typeof window !== 'undefined') {
@@ -35,7 +35,11 @@ export default function Page() {
 
   return (
     <Header currentView={currentView} onNavClick={handleNavClick} session={session}>
-      {currentView === 'chatbot' ? <ChatBot /> : <div>현재 지원하지 않는 뷰입니다.</div>}
+      {currentView === 'chatbot' ? (
+        <ChatBot session={session} /> 
+      ) : (
+        <div>현재 지원하지 않는 뷰입니다.</div>
+      )}
     </Header>
   );
 }

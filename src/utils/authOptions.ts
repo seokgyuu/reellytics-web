@@ -35,8 +35,8 @@ async function session({
   session: NextAuthSession;
   token: ExtendedJWT;
 }) {
-  session.user = token.user;
-  session.accessToken = token.accessToken;
+  session.user = token.user; // 사용자 정보를 세션에 저장
+  session.accessToken = token.accessToken; // JWT의 access token 저장
   session.error = token.error;
   return session;
 }
