@@ -1,55 +1,39 @@
-"use client";
+import React from "react";
+import { signIn, signOut, useSession } from "next-auth/react";
 
-import { signIn, signOut } from "next-auth/react";
-import { NextAuthSession } from "@/utils/authOptions";
+const Login: React.FC = () => {
+  const { data: session } = useSession();
 
-export default function Login({ session }: { session: NextAuthSession | null }) {
-  const handleSignOut = async () => {
-    try {
-      // NextAuth 로그아웃
-      await signOut({ redirect: false });
-
-      // 로컬 스토리지와 세션 스토리지 삭제
-      localStorage.clear();
-      sessionStorage.clear();
-    } catch (error) {
-      console.error("로그아웃 중 오류 발생:", error);
-    }
+  const handleLogin = async () => {
+    await signIn("google");
   };
-  
-  if (session?.error) {
-    handleSignOut();
-  }
 
-  if (session) {
-    return (
-      <div className="p-4 bg-gray-100 rounded-md shadow-md">
-        <h1 className="text-lg font-semibold mb-4">Logged In</h1>
-        <button
-          className="mb-4 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-          onClick={handleSignOut}
-        >
-          Sign Out
-        </button>
-        <div>
-          <h2 className="text-sm font-medium mb-2">정보 :</h2>
-          <pre className="bg-gray-50 p-2 rounded text-sm">
-            {JSON.stringify(session, null, 2)}
-          </pre>
-        </div>
-      </div>
-    );
-  }
+  const handleLogout = async () => {
+    await signOut();
+  };
 
   return (
     <div className="p-4 bg-gray-100 rounded-md shadow-md">
-      <h1 className="text-lg font-semibold mb-4">Welcome</h1>
-      <button
-        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-        onClick={() => signIn("google")}
-      >
-        Sign In with Google
-      </button>
+      {!session ? (
+        <button
+          onClick={handleLogin}
+          className="px-4 py-2 bg-blue-500 text-white rounded"
+        >
+          Sign In with Google
+        </button>
+      ) : (
+        <div>
+          <p>환영합니다, {session.user?.name}님</p>
+          <button
+            onClick={handleLogout}
+            className="px-4 py-2 bg-red-500 text-white rounded"
+          >
+            Sign Out
+          </button>
+        </div>
+      )}
     </div>
   );
-}
+};
+
+export default Login;
