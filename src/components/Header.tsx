@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { signOut, signIn } from "next-auth/react";
 import { Session } from "next-auth";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import TermOfService from "@/pages/term-of-service";
-import Profile from "@/components/Profile";
+import ChatList from "@/components/ChatList"; 
 
 interface NavProps {
   currentView: string;
@@ -16,13 +16,32 @@ interface NavProps {
 
 const Header: React.FC<NavProps> = ({ currentView, onNavClick, session, children }) => {
   const [activePage, setActivePage] = useState<string>("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   const renderPage = () => {
     if (activePage === "privacy-policy") return <PrivacyPolicy />;
     if (activePage === "term-of-service") return <TermOfService />;
-    if (activePage === "profile") return <Profile />;
+    if (activePage === "chatlist") return <ChatList />;
     return children;
   };
+
+  const toggleDropdown = () => {
+    setIsDropdownOpen((prev) => !prev);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -51,46 +70,44 @@ const Header: React.FC<NavProps> = ({ currentView, onNavClick, session, children
                 </a>
               </li>
 
-              <li className="ml-6 relative group">
-                <span className="text-gray-700 cursor-pointer hover:underline">
-                  Terms of Use
-                </span>
-                <div
-                  className="absolute left-0 mt-2 hidden group-hover:flex flex-col bg-white border border-gray-200 p-4 shadow-md rounded z-10"
-                  onMouseEnter={(e) => e.currentTarget.classList.add("flex")}
-                  onMouseLeave={(e) => e.currentTarget.classList.remove("flex")}
-                >
-                  <button
-                    onClick={() => setActivePage("privacy-policy")}
-                    className="text-gray-700 hover:text-black transition-all mb-2"
-                  >
-                    Privacy Policy
-                  </button>
-                  <button
-                    onClick={() => setActivePage("term-of-service")}
-                    className="text-gray-700 hover:text-black transition-all"
-                  >
-                    Terms of Service
-                  </button>
-                </div>
-              </li>
-
-              <li className="ml-6">
+              <div className="ml-6 relative" ref={dropdownRef}>
                 {session ? (
-                  <div className="flex items-center space-x-4">
+                  <div>
                     <span
                       className="text-gray-700 cursor-pointer hover:underline"
-                      onClick={() => setActivePage("profile")}
+                      onClick={toggleDropdown}
                     >
-                      {session.user?.name} 환영합니다.
+                      {session.user?.name}님 반갑습니다.
                     </span>
 
-                    <button
-                      onClick={() => signOut()}
-                      className="text-red-500 hover:text-red-700 transition-all"
-                    >
-                      Sign Out
-                    </button>
+                    {isDropdownOpen && (
+                      <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 shadow-md rounded z-10">
+                        <button
+                          onClick={() => setActivePage("chatlist")}
+                          className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
+                        >
+                          ChatList
+                        </button>
+                        <button
+                          onClick={() => setActivePage("privacy-policy")}
+                          className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
+                        >
+                          Privacy Policy
+                        </button>
+                        <button
+                          onClick={() => setActivePage("term-of-service")}
+                          className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
+                        >
+                          Terms of Service
+                        </button>
+                        <button
+                          onClick={() => signOut()}
+                          className="block w-full text-left px-4 py-2 text-red-500 hover:bg-red-100"
+                        >
+                          Log Out
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="flex items-center space-x-4">
@@ -102,7 +119,7 @@ const Header: React.FC<NavProps> = ({ currentView, onNavClick, session, children
                     </button>
                   </div>
                 )}
-              </li>
+              </div>
             </ul>
           </nav>
         </div>

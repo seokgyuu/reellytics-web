@@ -5,18 +5,83 @@ import React from "react";
 export default function PrivacyPolicy() {
   return (
     <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-4">개인정보 처리방침</h1>
-      <p>
-        저희는 고객님의 개인정보를 소중히 여깁니다. 이 정책은 저희가 수집하는 개인정보의 유형과 이를 사용하는 방법에 대해 설명합니다:
+      <h1 className="text-2xl font-bold mb-4">Privacy Policy</h1>
+        
+{/* next.js 를 vercel에 빌드 오류로  " 대신 &apos;   */}
+      <p className="mb-4">
+        ONE N SIX (hereinafter referred to as &apos;the Company&apos;) is committed to protecting your personal information.
+        This policy explains what types of personal information we collect and how we use it.
+      </p>
+
+      <h2 className="text-xl font-semibold mt-6 mb-2">Article 1: Purpose of Personal Information Collection and Use</h2>
+      <p className="mb-4">
+        The Company collects and uses personal information within the following scope to provide seamless services to users:
       </p>
       <ul className="list-disc list-inside my-4">
-        <li>저희는 이름과 이메일과 같은 기본적인 개인정보를 수집합니다.</li>
-        <li>고객님의 데이터는 안전하게 저장되며 제3자와 공유되지 않습니다.</li>
-        <li>
-          언제든지 고객님의 개인정보를 열람하거나 삭제를 요청할 수 있습니다.
-        </li>
+        <li>User authentication and service provision</li>
+        <li>Responding to customer inquiries</li>
+        <li>Compliance with laws and terms of service</li>
       </ul>
-      <p>궁금한 점이나 문제가 있으시면 으로 문의해 주십시오.</p>
+
+      <h2 className="text-xl font-semibold mt-6 mb-2">Article 2: Collected Personal Information and Collection Methods</h2>
+      <h3 className="font-semibold mt-2">Collected Personal Information</h3>
+      <ul className="list-disc list-inside my-2">
+        <li>(Required) Information provided through SSO login: Email (using Google login)</li>
+      </ul>
+      <h3 className="font-semibold mt-2">Methods of Collecting Personal Information</h3>
+      <ul className="list-disc list-inside my-2">
+        <li>Automatically collected through Google SSO (Single Sign-On) login integration</li>
+      </ul>
+
+      <h2 className="text-xl font-semibold mt-6 mb-2">Article 3: Retention and Use Period of Personal Information</h2>
+      <p className="mb-4">
+        The Company, in principle, promptly deletes personal information once the purpose of collection and use is achieved. However, if retention is required under relevant laws, the information will be stored for the legally mandated period and then deleted.
+      </p>
+      <ul className="list-disc list-inside my-2">
+        <li>Login records: 3 months (Communications Privacy Protection Act)</li>
+        <li>Under GDPR: Immediate deletion upon user request</li>
+      </ul>
+
+      <h2 className="text-xl font-semibold mt-6 mb-2">Article 4: Provision and Entrustment of Personal Information to Third Parties</h2>
+      <p className="mb-4">
+        The Company does not provide users’ personal information to external parties. Some service operations may be outsourced, and in such cases, the Company ensures that personal information is securely managed in compliance with privacy laws, including GDPR and CCPA.
+      </p>
+
+      <h2 className="text-xl font-semibold mt-6 mb-2">Article 5: Overseas Data Transfer</h2>
+      <p className="mb-4">
+        The Company stores users’ personal information on servers located in South Korea and applies appropriate protection measures in accordance with the legal requirements of specific countries. For users within the European Union (EU), adequate safeguards (such as SCCs, BCRs) are provided in compliance with GDPR.
+      </p>
+
+      <h2 className="text-xl font-semibold mt-6 mb-2">Article 6: User Rights and How to Exercise Them</h2>
+      <p className="mb-4">
+        Users can access, correct, delete, or request the suspension of their personal information processing at any time.
+      </p>
+      <ul className="list-disc list-inside my-2">
+        <li>Under GDPR, users have the right to data portability (request for data transfer to another service) and the right to be forgotten (request for deletion).</li>
+        <li>Under CCPA, users can request disclosure of personal information and opt out of the sale of their data.</li>
+        <li>Users can contact customer support for inquiries regarding personal information, and the Company will promptly take action.</li>
+      </ul>
+
+      <h2 className="text-xl font-semibold mt-6 mb-2">Article 7: Protection and Management of Personal Information</h2>
+      <p className="mb-4">
+        The Company takes the following measures to securely protect personal information:
+      </p>
+      <ul className="list-disc list-inside my-2">
+        <li>Encryption and restricted access to personal information</li>
+        <li>Operation of security systems to prevent hacking and viruses</li>
+        <li>Minimization of personnel handling personal information and conducting regular training</li>
+      </ul>
+
+      <h2 className="text-xl font-semibold mt-6 mb-2">Article 8: Personal Information Protection Officer and Contact Information</h2>
+      <p className="mb-4">
+        The Company has designated the following personal information protection officer to safeguard users&apos; personal information:
+      </p>
+      <ul className="list-disc list-inside my-2">
+        <li>Personal Information Protection Officer: Hyunjin Roh</li>
+        <li>Contact: onensix23@gmail.com</li>
+      </ul>
+
+      <p className="mt-6 text-gray-500">This Privacy Policy is effective from January 30, 2025.</p>
     </div>
   );
 }

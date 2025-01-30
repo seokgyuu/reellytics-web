@@ -3,11 +3,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { marked } from 'marked';
-import { v4 as uuidv4 } from 'uuid';
 import { collection, addDoc, getDocs, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import { db } from '../utils/firebaseConfig';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import useFirebaseAuth from '@/hooks/useFirebaseAuth'; // 추가한 훅 가져오기
+import { v4 as uuidv4 } from 'uuid';  
+import { AiOutlineReload } from 'react-icons/ai';
+import useFirebaseAuth from '@/hooks/useFirebaseAuth';
 
 interface ChatBotProps {
   session: {
@@ -21,49 +22,45 @@ interface ChatBotProps {
 
 const ChatBot: React.FC<ChatBotProps> = ({ session }) => {
   const chatLogRef = useRef<HTMLDivElement>(null);
-  const [sessionId, setSessionId] = useState<string>('');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string>('');
   const [messages, setMessages] = useState<{ sender: string; text: string }[]>([]);
   const [userInput, setUserInput] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  useFirebaseAuth(); // Firebase 사용자 인증 상태 유지
+  useFirebaseAuth();
 
-  // 세션 ID 초기화 및 설정 보장
+  // 컴포넌트가 마운트될 때 sessionId를 복구하거나 새로 생성
   useEffect(() => {
-    const storedSession = sessionStorage.getItem('session_id') || uuidv4();
-    sessionStorage.setItem('session_id', storedSession);
-    setSessionId(storedSession);
+    const storedSessionId = sessionStorage.getItem('sessionId');
+    if (storedSessionId) {
+      setSessionId(storedSessionId);
+    } else {
+      const newSessionId = uuidv4();
+      sessionStorage.setItem('sessionId', newSessionId);
+      setSessionId(newSessionId);
+    }
   }, []);
 
-  // 인증 상태 확인
+  // 사용자 이메일 설정
   useEffect(() => {
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user && session?.accessToken) {
-        setIsAuthenticated(true);
-        setAccessToken(session.accessToken);
-        console.log('Firebase 및 NextAuth 인증 성공:', user.email);
+      if (user && session?.user?.email) {
+        setUserEmail(session.user.email);
+        setAccessToken(session.accessToken ?? null);
       } else {
-        setIsAuthenticated(false);
-        setAccessToken(null);
-        console.warn('Firebase 또는 NextAuth 인증 실패.');
+        setUserEmail(null);
       }
     });
-
     return () => unsubscribe();
   }, [session]);
 
-  // Firestore에서 메시지 불러오기 (useCallback으로 메모이제이션)
   const loadMessagesFromFirestore = useCallback(async () => {
-    if (!sessionId || !isAuthenticated) {
-      console.warn('유효한 세션 ID가 없거나 인증되지 않은 사용자입니다.');
-      return;
-    }
-
+    if (!userEmail || !sessionId) return;
     try {
-      const messagesRef = collection(db, 'chat_sessions', sessionId, 'messages');
+      const messagesRef = collection(db, 'chat_sessions', userEmail, 'sessions', sessionId, 'messages');
       const q = query(messagesRef, orderBy('timestamp'));
       const querySnapshot = await getDocs(q);
       const loadedMessages = querySnapshot.docs.map((doc) => doc.data() as { sender: string; text: string });
@@ -71,23 +68,20 @@ const ChatBot: React.FC<ChatBotProps> = ({ session }) => {
     } catch (error) {
       console.error('Firestore 메시지 불러오기 실패:', error);
     }
-  }, [sessionId, isAuthenticated]);
+  }, [userEmail, sessionId]);
 
-  // 세션 ID와 인증 상태가 모두 준비된 후 Firestore 메시지 불러오기
   useEffect(() => {
-    if (sessionId && isAuthenticated) {
+    if (userEmail && sessionId) {
       loadMessagesFromFirestore();
     }
-  }, [sessionId, isAuthenticated, loadMessagesFromFirestore]);
+  }, [userEmail, sessionId, loadMessagesFromFirestore]);
 
-  // 스크롤 자동 하단 이동
   useEffect(() => {
     if (chatLogRef.current) {
       chatLogRef.current.scrollTop = chatLogRef.current.scrollHeight;
     }
   }, [messages]);
 
-  // AI API 호출
   const fetchGPTResponse = async (input: string): Promise<string> => {
     if (!accessToken) {
       return '로그인 후 이용해주세요';
@@ -100,7 +94,6 @@ const ChatBot: React.FC<ChatBotProps> = ({ session }) => {
         access_token: accessToken,
         name: session?.user?.name,
       });
-
       return response.data.response || '응답을 받지 못했습니다.';
     } catch (error) {
       console.error('AI 응답 오류:', error);
@@ -108,18 +101,9 @@ const ChatBot: React.FC<ChatBotProps> = ({ session }) => {
     }
   };
 
-  // 사용자 입력 처리
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userInput.trim()) return;
-
-    if (!isAuthenticated) {
-      setMessages((prev) => [
-        ...prev,
-        { sender: 'AI', text: '로그인 후 메시지를 보낼 수 있습니다.' },
-      ]);
-      return;
-    }
+    if (!userInput.trim() || !userEmail) return;
 
     const userMessage = { sender: '사용자', text: userInput };
     setMessages((prev) => [...prev, userMessage]);
@@ -137,15 +121,14 @@ const ChatBot: React.FC<ChatBotProps> = ({ session }) => {
     setIsLoading(false);
   };
 
-  // Firestore에 메시지 저장하기
   const saveMessageToFirestore = async (message: { sender: string; text: string }) => {
-    if (!sessionId) {
-      console.error('유효하지 않은 세션 ID로 메시지를 저장할 수 없습니다.');
+    if (!userEmail || !sessionId) {
+      console.error('사용자 이메일 또는 세션 ID가 설정되지 않아 메시지를 저장할 수 없습니다.');
       return;
     }
 
     try {
-      const messagesRef = collection(db, 'chat_sessions', sessionId, 'messages');
+      const messagesRef = collection(db, 'chat_sessions', userEmail, 'sessions', sessionId, 'messages');
       await addDoc(messagesRef, {
         ...message,
         timestamp: serverTimestamp(),
@@ -153,6 +136,14 @@ const ChatBot: React.FC<ChatBotProps> = ({ session }) => {
     } catch (error) {
       console.error('Firestore에 메시지 저장 실패:', error);
     }
+  };
+
+  const startNewChat = () => {
+    const newSessionId = uuidv4();
+    setSessionId(newSessionId);
+    sessionStorage.setItem('sessionId', newSessionId);
+    setMessages([]);
+    console.log('새로운 세션 시작:', newSessionId);
   };
 
   return (
@@ -165,8 +156,21 @@ const ChatBot: React.FC<ChatBotProps> = ({ session }) => {
         ))}
         {isLoading && <div className="flex items-center justify-center"><div className="spinner"></div></div>}
       </div>
-      <form onSubmit={handleFormSubmit} className="flex p-2 border-t border-gray-300 bg-white items-center">
-        <textarea value={userInput} onChange={(e) => setUserInput(e.target.value)} placeholder="메시지를 입력하세요" className="flex-grow p-2 rounded-2xl bg-gray-100 focus:outline-none" disabled={isLoading} />
+
+      <form onSubmit={handleFormSubmit} className="flex items-center border-t border-gray-300 bg-white p-2">
+        <AiOutlineReload
+          size={24}
+          className="mr-2 text-gray-600 hover:text-blue-500 cursor-pointer"
+          onClick={startNewChat}
+          title="새 채팅 시작"
+        />
+        <textarea
+          value={userInput}
+          onChange={(e) => setUserInput(e.target.value)}
+          placeholder="메시지를 입력하세요"
+          className="flex-grow p-2 rounded-2xl bg-gray-100 focus:outline-none"
+          disabled={isLoading}
+        />
         <button type="submit" disabled={isLoading} className="ml-2 px-4 py-2 bg-black text-white rounded-2xl hover:bg-gray-800 transition disabled:bg-gray-400">
           {isLoading ? '전송 중...' : '전송'}
         </button>
