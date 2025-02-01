@@ -19,7 +19,8 @@ const Header: React.FC<NavProps> = ({ currentView, onNavClick, session, children
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
-  const accessToken = session?.accessToken; 
+  // session에서 accessToken 가져오기
+  const accessToken = session?.accessToken;
 
   const renderPage = () => {
     switch (activePage) {
@@ -129,7 +130,6 @@ const Header: React.FC<NavProps> = ({ currentView, onNavClick, session, children
 
       <main className="flex-1 mt-[100px]">
         {renderPage()}
-        {/* ChatBot에 session에서 가져온 accessToken 전달 */}
         {currentView === "chatbot" && accessToken && (
           <ChatBot accessToken={accessToken} />
         )}

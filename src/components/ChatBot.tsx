@@ -3,9 +3,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 
-// ChatBotProps에 accessToken을 추가
 interface ChatBotProps {
-  accessToken: string;
+  accessToken: string; 
 }
 
 interface AnalyzeResponse {
@@ -45,11 +44,11 @@ const ChatBot: React.FC<ChatBotProps> = ({ accessToken }) => {
 
     try {
       const response = await axios.post<AnalyzeResponse>(
-        `${process.env.NEXT_PUBLIC_API_URL}/analyze`,
-        chatParams,
+        `${process.env.NEXT_PUBLIC_API_URL}/analyze`, 
+        chatParams, 
         {
           headers: {
-            //"Authorization": `Bearer ${accessToken}`,  
+            //"Authorization": `Bearer ${accessToken}`, 
             "Content-Type": "application/json",
           },
         }
