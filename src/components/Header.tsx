@@ -1,16 +1,16 @@
-"use client";
+'use client';
 
 import React, { useState, useEffect, useRef } from "react";
-import { signOut, signIn } from "next-auth/react";
-import { Session } from "next-auth";
+import { useSession, signOut, signIn } from "next-auth/react";
+import ChatHistory from "@/components/ChatHistory";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import TermOfService from "@/pages/term-of-service";
-import ChatList from "@/components/ChatList"; 
+import ChatBot from "@/components/ChatBot";
 
 interface NavProps {
   currentView: string;
   onNavClick: (view: string) => void;
-  session: Session | null;
+  session: any;
   children: React.ReactNode;
 }
 
@@ -19,11 +19,19 @@ const Header: React.FC<NavProps> = ({ currentView, onNavClick, session, children
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
+  const accessToken = session?.accessToken; 
+
   const renderPage = () => {
-    if (activePage === "privacy-policy") return <PrivacyPolicy />;
-    if (activePage === "term-of-service") return <TermOfService />;
-    if (activePage === "chatlist") return <ChatList />;
-    return children;
+    switch (activePage) {
+      case "privacy-policy":
+        return <PrivacyPolicy />;
+      case "term-of-service":
+        return <TermOfService />;
+      case "chatlist":
+        return <ChatHistory />;
+      default:
+        return children;
+    }
   };
 
   const toggleDropdown = () => {
@@ -73,10 +81,7 @@ const Header: React.FC<NavProps> = ({ currentView, onNavClick, session, children
               <div className="ml-6 relative" ref={dropdownRef}>
                 {session ? (
                   <div>
-                    <span
-                      className="text-gray-700 cursor-pointer hover:underline"
-                      onClick={toggleDropdown}
-                    >
+                    <span className="text-gray-700 cursor-pointer hover:underline" onClick={toggleDropdown}>
                       {session.user?.name}님 반갑습니다.
                     </span>
 
@@ -86,7 +91,7 @@ const Header: React.FC<NavProps> = ({ currentView, onNavClick, session, children
                           onClick={() => setActivePage("chatlist")}
                           className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
                         >
-                          ChatList
+                          Chat History
                         </button>
                         <button
                           onClick={() => setActivePage("privacy-policy")}
@@ -111,10 +116,7 @@ const Header: React.FC<NavProps> = ({ currentView, onNavClick, session, children
                   </div>
                 ) : (
                   <div className="flex items-center space-x-4">
-                    <button
-                      onClick={() => signIn("google")}
-                      className="text-gray-700 transition-all hover:text-black"
-                    >
+                    <button onClick={() => signIn("google")} className="text-gray-700 transition-all hover:text-black">
                       Login
                     </button>
                   </div>
@@ -125,7 +127,13 @@ const Header: React.FC<NavProps> = ({ currentView, onNavClick, session, children
         </div>
       </header>
 
-      <main className="flex-1 mt-[100px]">{renderPage()}</main>
+      <main className="flex-1 mt-[100px]">
+        {renderPage()}
+        {/* ChatBot에 session에서 가져온 accessToken 전달 */}
+        {currentView === "chatbot" && accessToken && (
+          <ChatBot accessToken={accessToken} />
+        )}
+      </main>
     </div>
   );
 };

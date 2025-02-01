@@ -1,80 +1,100 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import axios from 'axios';
-import { marked } from 'marked';
-import { collection, addDoc, getDocs, query, orderBy, serverTimestamp } from 'firebase/firestore';
-import { db } from '../utils/firebaseConfig';
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { v4 as uuidv4 } from 'uuid';  
-import { AiOutlineReload } from 'react-icons/ai';
-import useFirebaseAuth from '@/hooks/useFirebaseAuth';
+import React, { useState, useEffect, useRef } from "react";
+import axios from "axios";
 
+// ChatBotProps에 accessToken을 추가
 interface ChatBotProps {
-  session: {
-    user?: {
-      name?: string | null;
-      email?: string | null;
-    };
-    accessToken?: string;
-  } | null;
+  accessToken: string;
 }
 
-const ChatBot: React.FC<ChatBotProps> = ({ session }) => {
+interface AnalyzeResponse {
+  status: number;
+  result: string;
+}
+
+const ChatBot: React.FC<ChatBotProps> = ({ accessToken }) => {
   const chatLogRef = useRef<HTMLDivElement>(null);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [sessionId, setSessionId] = useState<string>('');
   const [messages, setMessages] = useState<{ sender: string; text: string }[]>([]);
-  const [userInput, setUserInput] = useState<string>('');
+  const [chatParams, setChatParams] = useState({
+    followers: 0,
+    elapsed_time: 0,
+    video_length: 0,
+    avg_watch_time: 0,
+    views: 0,
+    likes: 0,
+    comments: 0,
+    shares: 0,
+    saves: 0,
+    follows: 0,
+    version: 1,
+  });
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  useFirebaseAuth();
+  // 파라미터 값 변경 핸들러
+  const handleParamsChange = (e: React.ChangeEvent<HTMLInputElement>, field: string) => {
+    setChatParams((prev) => ({
+      ...prev,
+      [field]: Number(e.target.value),
+    }));
+  };
 
-  // 컴포넌트가 마운트될 때 sessionId를 복구하거나 새로 생성
-  useEffect(() => {
-    const storedSessionId = sessionStorage.getItem('sessionId');
-    if (storedSessionId) {
-      setSessionId(storedSessionId);
-    } else {
-      const newSessionId = uuidv4();
-      sessionStorage.setItem('sessionId', newSessionId);
-      setSessionId(newSessionId);
-    }
-  }, []);
+  // GPT API 호출
+  const fetchGPTResponse = async (): Promise<string> => {
+    console.log("API 호출 준비: 요청 파라미터", chatParams);
 
-  // 사용자 이메일 설정
-  useEffect(() => {
-    const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user && session?.user?.email) {
-        setUserEmail(session.user.email);
-        setAccessToken(session.accessToken ?? null);
-      } else {
-        setUserEmail(null);
-      }
-    });
-    return () => unsubscribe();
-  }, [session]);
-
-  const loadMessagesFromFirestore = useCallback(async () => {
-    if (!userEmail || !sessionId) return;
     try {
-      const messagesRef = collection(db, 'chat_sessions', userEmail, 'sessions', sessionId, 'messages');
-      const q = query(messagesRef, orderBy('timestamp'));
-      const querySnapshot = await getDocs(q);
-      const loadedMessages = querySnapshot.docs.map((doc) => doc.data() as { sender: string; text: string });
-      setMessages(loadedMessages);
-    } catch (error) {
-      console.error('Firestore 메시지 불러오기 실패:', error);
-    }
-  }, [userEmail, sessionId]);
+      const response = await axios.post<AnalyzeResponse>(
+        `${process.env.NEXT_PUBLIC_API_URL}/analyze`,
+        chatParams,
+        {
+          headers: {
+            //"Authorization": `Bearer ${accessToken}`,  
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
-  useEffect(() => {
-    if (userEmail && sessionId) {
-      loadMessagesFromFirestore();
+      console.log("API 요청 성공:", response.data);
+
+      if (response.data.status === 200 && response.data.result) {
+        return response.data.result;
+      } else {
+        throw new Error(`API 응답 상태 오류: status ${response.data.status}`);
+      }
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.error("API 요청 오류:", JSON.stringify(error.response?.data, null, 2));
+        return `오류: ${error.response?.data?.detail || "응답 처리 중 오류 발생"}`;
+      } else {
+        console.error("예상치 못한 오류:", (error as Error).message);
+        return "예상치 못한 오류가 발생했습니다.";
+      }
     }
-  }, [userEmail, sessionId, loadMessagesFromFirestore]);
+  };
+
+  // 파라미터 전송
+  const handleParamsSubmit = async () => {
+    const paramMessage = Object.entries(chatParams)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join("\n");
+
+    setMessages((prev) => [
+      ...prev,
+      { sender: "시스템", text: "파라미터가 설정되었습니다. 채팅을 시작할 수 있습니다." },
+      { sender: "사용자", text: paramMessage },
+    ]);
+
+    setIsLoading(true);
+    try {
+      const gptResponse = await fetchGPTResponse();
+      setMessages((prev) => [...prev, { sender: "AI", text: gptResponse }]);
+    } catch (error) {
+      setMessages((prev) => [...prev, { sender: "시스템", text: `오류 발생: ${error}` }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (chatLogRef.current) {
@@ -82,99 +102,54 @@ const ChatBot: React.FC<ChatBotProps> = ({ session }) => {
     }
   }, [messages]);
 
-  const fetchGPTResponse = async (input: string): Promise<string> => {
-    if (!accessToken) {
-      return '로그인 후 이용해주세요';
-    }
-    try {
-      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/chat`;
-      const response = await axios.post(apiUrl, {
-        query: input,
-        session_id: sessionId,
-        access_token: accessToken,
-        name: session?.user?.name,
-      });
-      return response.data.response || '응답을 받지 못했습니다.';
-    } catch (error) {
-      console.error('AI 응답 오류:', error);
-      return '서버 연결에 실패했습니다. 나중에 다시 시도해주세요.';
-    }
-  };
-
-  const handleFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!userInput.trim() || !userEmail) return;
-
-    const userMessage = { sender: '사용자', text: userInput };
-    setMessages((prev) => [...prev, userMessage]);
-    await saveMessageToFirestore(userMessage);
-
-    setUserInput('');
-    setIsLoading(true);
-
-    const gptResponse = await fetchGPTResponse(userInput);
-    const aiMessage = { sender: 'AI', text: gptResponse };
-
-    setMessages((prev) => [...prev, aiMessage]);
-    await saveMessageToFirestore(aiMessage);
-
-    setIsLoading(false);
-  };
-
-  const saveMessageToFirestore = async (message: { sender: string; text: string }) => {
-    if (!userEmail || !sessionId) {
-      console.error('사용자 이메일 또는 세션 ID가 설정되지 않아 메시지를 저장할 수 없습니다.');
-      return;
-    }
-
-    try {
-      const messagesRef = collection(db, 'chat_sessions', userEmail, 'sessions', sessionId, 'messages');
-      await addDoc(messagesRef, {
-        ...message,
-        timestamp: serverTimestamp(),
-      });
-    } catch (error) {
-      console.error('Firestore에 메시지 저장 실패:', error);
-    }
-  };
-
-  const startNewChat = () => {
-    const newSessionId = uuidv4();
-    setSessionId(newSessionId);
-    sessionStorage.setItem('sessionId', newSessionId);
-    setMessages([]);
-    console.log('새로운 세션 시작:', newSessionId);
-  };
-
   return (
     <div id="Chatbot" className="absolute top-[100px] left-0 right-0 bottom-0 flex flex-col max-w-[1280px] h-[calc(100vh-100px)] bg-white overflow-hidden z-10 mx-auto sm:w-[95%]">
       <div id="chat-log" ref={chatLogRef} className="flex-grow overflow-y-auto p-4 text-sm leading-6 flex flex-col justify-start">
         {messages.map((msg, index) => (
-          <div key={index} className={`${msg.sender === '사용자' ? 'bg-green-100 self-end' : 'bg-gray-200 self-start'} p-2 rounded-2xl max-w-[80%] mb-2 whitespace-pre-wrap`}>
-            {msg.sender === 'AI' ? <div dangerouslySetInnerHTML={{ __html: marked(msg.text) }} className="prose" /> : msg.text}
+          <div
+            key={index}
+            className={`p-2 rounded-2xl max-w-[80%] mb-2 whitespace-pre-wrap ${
+              msg.sender === "사용자" ? "bg-green-100 self-end" : "bg-gray-200 self-start"
+            }`}
+          >
+            {msg.text}
           </div>
         ))}
-        {isLoading && <div className="flex items-center justify-center"><div className="spinner"></div></div>}
+        {isLoading && (
+          <div className="flex items-center justify-center">
+            <div className="spinner"></div>
+          </div>
+        )}
       </div>
 
-      <form onSubmit={handleFormSubmit} className="flex items-center border-t border-gray-300 bg-white p-2">
-        <AiOutlineReload
-          size={24}
-          className="mr-2 text-gray-600 hover:text-blue-500 cursor-pointer"
-          onClick={startNewChat}
-          title="새 채팅 시작"
-        />
-        <textarea
-          value={userInput}
-          onChange={(e) => setUserInput(e.target.value)}
-          placeholder="메시지를 입력하세요"
-          className="flex-grow p-2 rounded-2xl bg-gray-100 focus:outline-none"
+      <div className="p-4 bg-gray-100 border-b">
+        <h4 className="font-semibold mb-2">API 요청 파라미터 설정</h4>
+
+        {Object.keys(chatParams).map((param) => (
+          <div key={param} className="mb-2 flex items-center">
+            <label htmlFor={param} className="w-40 font-medium text-gray-700">
+              {param}:
+            </label>
+            <input
+              id={param}
+              type="number"
+              value={chatParams[param as keyof typeof chatParams]}
+              onChange={(e) => handleParamsChange(e, param)}
+              className="w-32 p-1 border rounded-md text-sm"
+            />
+          </div>
+        ))}
+
+        <button
+          onClick={handleParamsSubmit}
           disabled={isLoading}
-        />
-        <button type="submit" disabled={isLoading} className="ml-2 px-4 py-2 bg-black text-white rounded-2xl hover:bg-gray-800 transition disabled:bg-gray-400">
-          {isLoading ? '전송 중...' : '전송'}
+          className={`mt-2 px-4 py-2 text-white rounded-lg transition ${
+            isLoading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"
+          }`}
+        >
+          {isLoading ? "전송 중..." : "파라미터 전송"}
         </button>
-      </form>
+      </div>
     </div>
   );
 };

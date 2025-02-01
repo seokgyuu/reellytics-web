@@ -1,3 +1,4 @@
+//토큰 테스트
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -8,7 +9,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "No token found" }, { status: 401 });
   }
 
-  // 필요한 정보만 선택적으로 반환
   const filteredToken = {
     name: token.name,
     email: token.email,

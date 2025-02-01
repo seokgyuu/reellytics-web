@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
 import React, { useState } from 'react';
 import Header from '@/components/Header';
 import ChatBot from '@/components/ChatBot';
 import { useSession } from 'next-auth/react';
-import { FaSpinner } from 'react-icons/fa'; 
+import { FaSpinner } from 'react-icons/fa';
 
 export default function Page() {
   const { data: session, status } = useSession();
@@ -16,7 +16,6 @@ export default function Page() {
     return 'chatbot';
   });
 
-  // sessionStorage에 저장
   const handleNavClick = (view: string) => {
     setCurrentView(view);
     if (typeof window !== 'undefined') {
@@ -24,7 +23,6 @@ export default function Page() {
     }
   };
 
-  // 로딩 상태
   if (status === 'loading') {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -36,7 +34,7 @@ export default function Page() {
   return (
     <Header currentView={currentView} onNavClick={handleNavClick} session={session}>
       {currentView === 'chatbot' ? (
-        <ChatBot session={session} /> 
+        <ChatBot accessToken={session?.accessToken || ""} /> 
       ) : (
         <div>현재 지원하지 않는 뷰입니다.</div>
       )}

@@ -1,35 +1,31 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method === "POST") {
-    const { query, session_id, access_token, name } = req.body;
-
-    if (!access_token) {
-      return res.status(401).json({ error: "Access token is missing" });
-    }
-
-    let responseText: string;
-
-    switch (query.toLowerCase()) {
-      case "안녕하세요":
-      case "hello":
-        responseText = `안녕하세요 ${name || "사용자"}님! 무엇을 도와드릴까요?`;
-        break;
-      case "내 이름이 뭐야":
-        responseText = `당신의 이름은 ${name || "알 수 없음"}입니다.`;
-        break;
-      case "날씨 어때?":
-        responseText = "오늘은 맑은 날씨입니다! 좋은 하루 보내세요.";
-        break;
-      default:
-        responseText = "죄송해요, 아직 그 질문에 대한 답변은 준비되지 않았어요.";
-    }
-
-    return res.status(200).json({
-      response: responseText, 
-      session_id: session_id,
-    });
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method Not Allowed" });
   }
 
-  return res.status(405).json({ error: "Method not allowed" });
+  const { query, followers, elapsed_time, video_length, avg_watch_time, views, likes, comments, shares, saves, follows } = req.body;
+
+  if (!query) {
+    return res.status(400).json({ error: "Query 값이 필요합니다." });
+  }
+
+  console.log("수신된 데이터:", {
+    query,
+    followers,
+    elapsed_time,
+    video_length,
+    avg_watch_time,
+    views,
+    likes,
+    comments,
+    shares,
+    saves,
+    follows,
+  });
+
+  res.status(200).json({
+    result: `입력한 질문: ${query}\n분석 데이터를 성공적으로 처리했습니다.`,
+  });
 }

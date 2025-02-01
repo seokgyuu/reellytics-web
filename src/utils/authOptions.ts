@@ -1,6 +1,6 @@
 import { NextAuthOptions, Session } from "next-auth";
-import { JWT } from "next-auth/jwt";
 import GoogleProvider from "next-auth/providers/google";
+import { JWT } from "next-auth/jwt";
 
 // JWT 확장 타입 정의
 interface ExtendedJWT extends JWT {
@@ -19,17 +19,19 @@ interface ExtendedJWT extends JWT {
 // 세션 확장 타입 정의
 declare module "next-auth" {
   interface Session {
-    idToken?: string;  // idToken 추가
+    idToken?: string;
     accessToken?: string;
     user?: {
       name?: string | null;
       email?: string | null;
       image?: string | null;
     };
+    error?: string;
   }
 }
 
-async function session({
+// 세션 콜백 함수 정의
+async function sessionCallback({
   session,
   token,
 }: {
@@ -38,11 +40,45 @@ async function session({
 }) {
   session.user = token.user;
   session.accessToken = token.accessToken;
-  session.idToken = token.idToken;  // idToken 할당
+  session.idToken = token.idToken;
   session.error = token.error;
   return session;
 }
 
+// 액세스 토큰 갱신 함수
+async function refreshAccessToken(token: ExtendedJWT) {
+  try {
+    const response = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: process.env.GOOGLE_CLIENT_ID!,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+        refresh_token: token.refreshToken!,
+        grant_type: "refresh_token",
+      }),
+    });
+
+    const refreshedTokens = await response.json();
+
+    if (!response.ok) {
+      throw new Error(`Failed to refresh access token: ${JSON.stringify(refreshedTokens)}`);
+    }
+
+    return {
+      ...token,
+      accessToken: refreshedTokens.access_token,
+      idToken: refreshedTokens.id_token || token.idToken,
+      accessTokenExpires: Date.now() + refreshedTokens.expires_in * 1000,
+      refreshToken: refreshedTokens.refresh_token || token.refreshToken,
+    };
+  } catch (error) {
+    console.error("리프레시 토큰 갱신 실패:", error);
+    return { ...token, error: "RefreshAccessTokenError" };
+  }
+}
+
+// NextAuth 설정
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   providers: [
@@ -58,60 +94,40 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
+    // JWT 콜백에서 액세스 토큰 설정
     jwt: async ({ token, user, account }) => {
-      const extendedToken = token as ExtendedJWT;
+      let extendedToken = token as ExtendedJWT;
 
       if (user && account) {
-        return {
-          ...extendedToken,
+        extendedToken = {
           accessToken: account.access_token,
-          idToken: account.id_token,  // idToken 저장
+          idToken: account.id_token,
           refreshToken: account.refresh_token,
-          accessTokenExpires: Date.now() + (account.expires_at ?? 0) * 1000,
+          accessTokenExpires: Date.now() + (account.expires_at ?? 3600) * 1000,
           user: {
             name: user.name || null,
             email: user.email || null,
             image: user.image || null,
           },
         };
-      }
-
-      if (extendedToken.accessTokenExpires && Date.now() < extendedToken.accessTokenExpires) {
+      } else if (Date.now() < (extendedToken.accessTokenExpires || 0)) {
         return extendedToken;
+      } else if (extendedToken.refreshToken) {
+        extendedToken = await refreshAccessToken(extendedToken);
       }
 
-      if (extendedToken.refreshToken) {
-        try {
-          const response = await fetch("https://oauth2.googleapis.com/token", {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: new URLSearchParams({
-              client_id: process.env.GOOGLE_CLIENT_ID!,
-              client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-              refresh_token: extendedToken.refreshToken,
-              grant_type: "refresh_token",
-            }),
-          });
-
-          const refreshedTokens = await response.json();
-
-          if (!response.ok) throw refreshedTokens;
-
-          return {
-            ...extendedToken,
-            accessToken: refreshedTokens.access_token,
-            idToken: refreshedTokens.id_token || extendedToken.idToken,
-            accessTokenExpires: Date.now() + refreshedTokens.expires_in * 1000,
-            refreshToken: refreshedTokens.refresh_token || extendedToken.refreshToken,
-          };
-        } catch (error) {
-          console.error("리프레시 토큰 갱신 실패:", error);
-          return { ...extendedToken, error: "RefreshAccessTokenError" };
-        }
-      }
-
-      return { ...extendedToken, error: "RefreshTokenMissing" };
+      return extendedToken;
     },
-    session,
+    session: sessionCallback,
+  },
+  events: {
+    async signOut({ token }) {
+      console.log("사용자 로그아웃:", token);
+    },
+  },
+  pages: {
+    signIn: "/auth/signin",
+    signOut: "/auth/signout",
+    error: "/auth/error",
   },
 };
