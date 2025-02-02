@@ -1,17 +1,18 @@
-import { authOptions } from "@/utils/authOptions";
-import { getServerSession } from "next-auth";
+import { NextAuthSession } from '@/types/next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getServerSession } from 'next-auth';
 
-async function fetchWithToken(url: string, init?: RequestInit) {
+async function fetchWithToken(url: string, init?: { headers?: {} }) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = (await getServerSession(authOptions)) as NextAuthSession | null;
 
-    if (!session?.accessToken) {
-      throw new Error("No valid session or access token found");
+    if (session === null) {
+      return null;
     }
 
     const commonHeaders = {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${session.accessToken}`,
+      'Content-Type': 'application/json',
+      Authorization: `${session.accessToken ?? ''}`, 
     };
 
     const response = await fetch(url, {
@@ -23,13 +24,13 @@ async function fetchWithToken(url: string, init?: RequestInit) {
     });
 
     if (!response.ok) {
-      throw new Error("Network response was not ok");
+      throw new Error('Network response was not ok');
     }
 
     return response.json();
-  } catch (error) {
-    console.error("API 요청 중 오류 발생:", error);
-    return null;
+  } catch (e) {
+    console.error('API 호출 중 오류 발생:', e);
+    return 'Logout status';
   }
 }
 

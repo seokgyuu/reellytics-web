@@ -48,7 +48,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ accessToken }) => {
         chatParams, 
         {
           headers: {
-            //"Authorization": `Bearer ${accessToken}`, 
+            "Authorization": `${accessToken}`, 
             "Content-Type": "application/json",
           },
         }
