@@ -14,11 +14,13 @@ const eslintConfig = [
   {
     files: ["**/*.{js,jsx,ts,tsx}"],
     rules: {
+      "@typescript-eslint/no-namespace": "off",
       "@typescript-eslint/no-explicit-any": "off", 
       "@typescript-eslint/no-empty-object-type": "off",
-      "@typescript-eslint/no-unused-vars": [
-        "warn", 
+       "@typescript-eslint/no-unused-vars": [
+        "off",  
         {
+          varsIgnorePattern: "^NextAuth$",  
           argsIgnorePattern: "^_", 
         },
       ],
