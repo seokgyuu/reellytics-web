@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 import { signIn, signOut, useSession } from 'next-auth/react';
-import PrivacyPolicy from '@/pages/privacy-policy';
-import TermOfService from '@/pages/term-of-service';
+import PrivacyPolicy from '@/app//privacy-policy/page';
+import TermOfService from '@/app/term-of-service/page';
 import ChatBot from '@/components/ChatBot';
 
 interface HeaderProps {
