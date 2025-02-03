@@ -1,22 +1,31 @@
-import { MongoClient } from 'mongodb';
+import mongoose from 'mongoose';
 
-if (!process.env.MONGODB_URI) {
-  throw new Error('MONGODB_URI 환경 변수가 설정되지 않았습니다.');
+const MONGODB_URI = process.env.MONGODB_URI!;
+
+if (!MONGODB_URI) {
+  throw new Error('MONGODB_URI 환경 변수를 설정해주세요!');
 }
 
-const uri = process.env.MONGODB_URI;
-let client: MongoClient;
-let clientPromise: Promise<MongoClient>;
+let cached = global.mongoose;
 
-if (process.env.NODE_ENV === 'development') {
-  if (!global._mongoClientPromise) {
-    client = new MongoClient(uri);
-    global._mongoClientPromise = client.connect();
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
+
+export async function connectToDatabase() {
+  if (cached.conn) {
+    return cached.conn;
   }
-  clientPromise = global._mongoClientPromise;
-} else {
-  client = new MongoClient(uri);
-  clientPromise = client.connect();
-}
 
-export default clientPromise;
+  if (!cached.promise) {
+    cached.promise = mongoose.connect(MONGODB_URI, {
+      bufferCommands: false,
+    }).then((mongoose) => {
+      console.log('✅ MongoDB 연결 성공');
+      return mongoose;
+    });
+  }
+
+  cached.conn = await cached.promise;
+  return cached.conn;
+}

@@ -26,6 +26,7 @@
     "google-one-tap": "^1.0.6",
     "marked": "^15.0.6",
     "mongodb": "^5.9.2",
+    "mongoose": "^8.9.6",
     "next": "15.1.4",
     "next-auth": "^4.24.11",
     "openai": "^4.80.1",
