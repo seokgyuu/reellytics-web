@@ -1,9 +1,11 @@
 const nextConfig = {
   reactStrictMode: true,
   env: {
-    MONGODB_URI: process.env.MONGODB_URI,
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+    KEYCLOAK_ID: process.env.KEYCLOAK_ID,
+    KEYCLOAK_SECRET: process.env.KEYCLOAK_SECRET,
+    KEYCLOAK_ISSUER: process.env.KEYCLOAK_ISSUER,
   },
 };
 
-module.exports = nextConfig;
+export default nextConfig;

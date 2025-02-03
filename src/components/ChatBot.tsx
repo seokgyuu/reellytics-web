@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from "react";
-import axios from "axios";
+import React, { useState, useEffect, useRef } from 'react';
+import fetchWithToken from '@/utils/fetchWithToken';
 
 interface ChatBotProps {
-  accessToken: string; 
+  accessToken: string | null;
 }
 
 interface AnalyzeResponse {
@@ -30,7 +30,6 @@ const ChatBot: React.FC<ChatBotProps> = ({ accessToken }) => {
   });
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  // 파라미터 값 변경 핸들러
   const handleParamsChange = (e: React.ChangeEvent<HTMLInputElement>, field: string) => {
     setChatParams((prev) => ({
       ...prev,
@@ -38,58 +37,45 @@ const ChatBot: React.FC<ChatBotProps> = ({ accessToken }) => {
     }));
   };
 
-  // GPT API 호출
   const fetchGPTResponse = async (): Promise<string> => {
-    console.log("API 호출 준비: 요청 파라미터", chatParams);
-
     try {
-      const response = await axios.post<AnalyzeResponse>(
-        `${process.env.NEXT_PUBLIC_API_URL}/analyze`, 
-        chatParams, 
+      const data = await fetchWithToken(
+        `${process.env.NEXT_PUBLIC_API_URL}/analyze`,
+        accessToken,
         {
-          headers: {
-            "Authorization": `${accessToken}`, 
-            "Content-Type": "application/json",
-          },
+          method: 'POST',
+          body: JSON.stringify(chatParams),
         }
       );
 
-      console.log("API 요청 성공:", response.data);
-
-      if (response.data.status === 200 && response.data.result) {
-        return response.data.result;
+      if (data.status === 200) {
+        return data.result;
       } else {
-        throw new Error(`API 응답 상태 오류: status ${response.data.status}`);
+        throw new Error(`API 응답 오류: status ${data.status}`);
       }
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        console.error("API 요청 오류:", JSON.stringify(error.response?.data, null, 2));
-        return `오류: ${error.response?.data?.detail || "응답 처리 중 오류 발생"}`;
-      } else {
-        console.error("예상치 못한 오류:", (error as Error).message);
-        return "예상치 못한 오류가 발생했습니다.";
-      }
+      console.error('API 요청 오류:', error);
+      return 'API 요청 중 오류가 발생했습니다.';
     }
   };
 
-  // 파라미터 전송
   const handleParamsSubmit = async () => {
     const paramMessage = Object.entries(chatParams)
       .map(([key, value]) => `${key}: ${value}`)
-      .join("\n");
+      .join('\n');
 
     setMessages((prev) => [
       ...prev,
-      { sender: "시스템", text: "파라미터가 설정되었습니다. 채팅을 시작할 수 있습니다." },
-      { sender: "사용자", text: paramMessage },
+      { sender: '시스템', text: '파라미터가 설정되었습니다. 채팅을 시작할 수 있습니다.' },
+      { sender: '사용자', text: paramMessage },
     ]);
 
     setIsLoading(true);
     try {
       const gptResponse = await fetchGPTResponse();
-      setMessages((prev) => [...prev, { sender: "AI", text: gptResponse }]);
+      setMessages((prev) => [...prev, { sender: 'AI', text: gptResponse }]);
     } catch (error) {
-      setMessages((prev) => [...prev, { sender: "시스템", text: `오류 발생: ${error}` }]);
+      setMessages((prev) => [...prev, { sender: '시스템', text: `오류 발생: ${error}` }]);
     } finally {
       setIsLoading(false);
     }
@@ -108,7 +94,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ accessToken }) => {
           <div
             key={index}
             className={`p-2 rounded-2xl max-w-[80%] mb-2 whitespace-pre-wrap ${
-              msg.sender === "사용자" ? "bg-green-100 self-end" : "bg-gray-200 self-start"
+              msg.sender === '사용자' ? 'bg-green-100 self-end' : 'bg-gray-200 self-start'
             }`}
           >
             {msg.text}
@@ -143,10 +129,10 @@ const ChatBot: React.FC<ChatBotProps> = ({ accessToken }) => {
           onClick={handleParamsSubmit}
           disabled={isLoading}
           className={`mt-2 px-4 py-2 text-white rounded-lg transition ${
-            isLoading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"
+            isLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'
           }`}
         >
-          {isLoading ? "전송 중..." : "파라미터 전송"}
+          {isLoading ? '전송 중...' : '파라미터 전송'}
         </button>
       </div>
     </div>

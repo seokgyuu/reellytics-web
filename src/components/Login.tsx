@@ -1,37 +1,52 @@
 'use client';
 
-import { signIn, signOut, useSession } from 'next-auth/react';
-import { useEffect, useState } from 'react';
+import { signIn, signOut } from 'next-auth/react';
+import { NextAuthSession } from '@/utils/authOptions';
 
-const Login = () => {
-  const { data: session } = useSession();
-  const [apiResponse, setApiResponse] = useState(null);
+export default function Login({
+	session,
+}: {
+	session: NextAuthSession | null;
+}) {
 
-  const handleLogin = async () => {
-    await signIn('keycloak');
-  };
+	if (session?.error) {
+        console.log('session error');
+		signOut();
+	}
+	if (session) {
+		return (
+			<div>
+				<button onClick={() => signOut()}>Sign out</button>
+				<div>
+					<h1>Session</h1>
+					<pre>{JSON.stringify(session, null, 2)}</pre>
+				</div>
+			</div>
+		);
+	}
 
-  const handleLogout = async () => {
-    await signOut();
-  };
+	return (
+		<div>
+            <button
+                onClick={() => {
+                    signIn('keycloak');
+                    console.log('Sign in');
+                }}
+            >
+                Sign in
+            </button>
 
-  return (
-    <div>
-      {!session ? (
-        <button onClick={handleLogin} className="px-4 py-2 bg-blue-500 text-white rounded">
-          Keycloak으로 로그인
-        </button>
-      ) : (
-        <div>
-          <p>환영합니다, {session.user?.name}님</p>
-          <p>이메일: {session.user?.email}</p>
-          <button onClick={handleLogout} className="px-4 py-2 bg-red-500 text-white rounded">
-            로그아웃
-          </button>
+			<div>
+            <button onClick={() => signOut()}>Sign out</button>
+            <div>
+                <h1>Session</h1>
+                <pre>{JSON.stringify(session, null, 2)}</pre>
+            </div>
+            
         </div>
-      )}
-    </div>
-  );
-};
-
-export default Login;
+        </div>
+	);
+}
+function fetchWithToken(arg0: string) {
+    throw new Error('Function not implemented.');
+}

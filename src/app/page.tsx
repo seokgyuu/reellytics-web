@@ -1,43 +1,21 @@
-"use client";
-
-import React, { useState } from 'react';
-import Header from '@/components/Header';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/utils/authOptions';
 import ChatBot from '@/components/ChatBot';
-import { useSession } from 'next-auth/react';
-import { FaSpinner } from 'react-icons/fa';
+import Header from '@/components/Header';
+import Login from '@/components/Login';
 
-export default function Page() {
-  const { data: session, status } = useSession();
-
-  const [currentView, setCurrentView] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      return sessionStorage.getItem('currentView') || 'chatbot';
-    }
-    return 'chatbot';
-  });
-
-  const handleNavClick = (view: string) => {
-    setCurrentView(view);
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('currentView', view);
-    }
-  };
-
-  if (status === 'loading') {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <FaSpinner className="animate-spin text-gray-600 text-4xl" />
-      </div>
-    );
-  }
+export default async function Page() {
+  const session = await getServerSession(authOptions);
 
   return (
-    <Header currentView={currentView} onNavClick={handleNavClick} session={session}>
-      {currentView === 'chatbot' ? (
-        <ChatBot accessToken={session?.accessToken || ""} /> 
-      ) : (
-        <div>현재 지원하지 않는 뷰입니다.</div>
-      )}
-    </Header>
+    <div className="min-h-screen flex flex-col">
+      <Header />
+
+      <main className="p-6">
+        <h1 className="text-2xl font-bold mb-4">Reellytics 로그인 테스트</h1>
+        <Login session={session} />
+        {session?.accessToken && <ChatBot accessToken={session.accessToken} />}
+      </main>
+    </div>
   );
 }
