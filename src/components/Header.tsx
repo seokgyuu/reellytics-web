@@ -21,10 +21,9 @@ const Header: React.FC = () => {
   const [activePage, setActivePage] = useState<string>("home");
   const [chatHistory, setChatHistory] = useState<ChatHistoryItem[]>([]);
   const [selectedChatDetails, setSelectedChatDetails] = useState<ChatHistoryItem | null>(null);
-  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);  
+  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // 히스토리 가져오기
   useEffect(() => {
     if (session?.accessToken) {
       fetchChatHistory();
@@ -44,10 +43,9 @@ const Header: React.FC = () => {
     };
   }, []);
 
-  // 채팅 히스토리 불러오기
   const fetchChatHistory = async () => {
     try {
-      const response = await fetch("https://api.reelstatics.com/api/v1/reelstatics/history", {
+      const response = await fetch("https://api.reelstatics.com/api/v1/reelstatics/history?limit=30", { // 30개까지
         method: "GET",
         headers: {
           Authorization: session?.accessToken || "",
@@ -100,12 +98,45 @@ const Header: React.FC = () => {
     }
   };
 
-  // 채팅 히스토리
   const fetchChatDetails = (chat: ChatHistoryItem) => {
     setSelectedChatDetails(chat);
   };
 
-  // 렌더링할 페이지
+  const fetchHistoryContents = async (chatId: number) => {
+    const req_url = `https://api.reelstatics.com/api/v1/reelstatics/history/${chatId}`;
+
+    console.log('가져온 url:', req_url);
+
+    try {
+      const response = await fetch(req_url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Authorization': session?.accessToken || "",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`히스토리 콘텐츠 요청 실패: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('응답 데이터:', data);
+      return data;
+    } catch (error) {
+      console.error('가져오는 중 오류:', error);
+      return null;
+    }
+  };
+
+  const handleHistoryContentFetch = async (chatId: number) => {
+    const data = await fetchHistoryContents(chatId);
+    if (data) {
+      console.log('가져온 데이터:', data);
+    }
+  };
+
   const renderContent = () => {
     switch (activePage) {
       case "privacy-policy":
@@ -115,7 +146,7 @@ const Header: React.FC = () => {
       case "chat":
         return <ChatBot accessToken={session?.accessToken || ""} />;
       case "history":
-        return <History chatHistory={chatHistory} onChatSelect={fetchChatDetails} onTitleUpdate={handleTitleUpdate} />;
+        return <History chatHistory={chatHistory} onChatSelect={(chat) => { fetchChatDetails(chat); handleHistoryContentFetch(chat.id); }} onTitleUpdate={handleTitleUpdate} />;
       default:
         return <div className="text-center mt-10">뭐 넣을지 고민</div>;
     }
