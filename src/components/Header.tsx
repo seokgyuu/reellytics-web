@@ -11,15 +11,17 @@ interface ChatHistoryItem {
   id: number;
   title: string;
   created_at: string;
+  updated_at: string;
 }
 
 const Header: React.FC = () => {
   const { data: session } = useSession();
   const [activePage, setActivePage] = useState<string>("home");
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [chatHistory, setChatHistory] = useState<ChatHistoryItem[]>([]);
+  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);  
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // 히스토리 
   useEffect(() => {
     if (session?.accessToken) {
       fetchChatHistory();
@@ -39,13 +41,14 @@ const Header: React.FC = () => {
     };
   }, []);
 
+  // 채팅 히스토리
   const fetchChatHistory = async () => {
     try {
       const response = await fetch("https://api.reelstatics.com/api/v1/reelstatics/history", {
         method: "GET",
         headers: {
-          "Authorization": session?.accessToken || "",
-          "Accept": "application/json",
+          Authorization: session?.accessToken || "",
+          Accept: "application/json",
           "Content-Type": "application/json",
         },
       });
@@ -61,6 +64,42 @@ const Header: React.FC = () => {
     }
   };
 
+  // 제목 수정 
+  const patchChatTitle = async (chatId: number, newTitle: string) => {
+    try {
+      const response = await fetch(`https://api.reelstatics.com/api/v1/reelstatics/history/${chatId}`, {
+        method: "PATCH",
+        headers: {
+          Authorization: session?.accessToken || "",
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ title: newTitle }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`제목 수정 실패: ${response.statusText}`);
+      }
+
+      console.log("제목 수정 성공");
+      return true;
+    } catch (error) {
+      console.error("제목 수정 오류:", error);
+      return false;
+    }
+  };
+
+  // 제목 수정 
+  const handleTitleUpdate = async (chatId: number, newTitle: string) => {
+    const success = await patchChatTitle(chatId, newTitle);
+    if (success) {
+      setChatHistory((prev) =>
+        prev.map((item) => (item.id === chatId ? { ...item, title: newTitle } : item))
+      );
+    }
+  };
+
+  // 렌더링할 페이지 
   const renderContent = () => {
     switch (activePage) {
       case "privacy-policy":
@@ -70,7 +109,7 @@ const Header: React.FC = () => {
       case "chat":
         return <ChatBot accessToken={session?.accessToken || ""} />;
       case "history":
-        return <History chatHistory={chatHistory} />;
+        return <History chatHistory={chatHistory} onTitleUpdate={handleTitleUpdate} />;
       default:
         return <div className="text-center mt-10">뭐 넣을지 고민</div>;
     }

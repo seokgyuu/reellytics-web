@@ -71,7 +71,6 @@ export const authOptions: NextAuthOptions = {
 
 	callbacks: {
 		async jwt({ token, user, account }) {
-			// Initial sign in
 			if (user && account && account.expires_at) {
 				return {
 					accessToken: account.access_token,

@@ -91,7 +91,6 @@ const ChatBot: React.FC = () => {
     const analyzeResult = await callAnalyzeAPI();
 
     if (analyzeResult) {
-      // analyze API의 응답을 채팅 메시지로 추가
       setMessages((prev) => [
         ...prev,
         { sender: "AI", text: JSON.stringify(analyzeResult, null, 2) },
