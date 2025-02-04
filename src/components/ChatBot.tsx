@@ -9,16 +9,26 @@ const ChatBot: React.FC = () => {
   const chatLogRef = useRef<HTMLDivElement>(null);
   const { data: session } = useSession();
   const [messages, setMessages] = useState<{ sender: string; text: string }[]>(() => {
-    // sessionStorage에서 로그 복원
     const storedMessages = sessionStorage.getItem("chat_log");
     return storedMessages
       ? JSON.parse(storedMessages)
-      : [{ sender: "AI", text: "안녕하세요! 무엇을 도와드릴까요?" }];
+      : [{ sender: "AI", text: "데이터를 입력해주세요" }];
   });
-  const [userInput, setUserInput] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  // 세션 ID 생성
+  const [parameters, setParameters] = useState({
+    followers: 0,
+    elapsed_time: 0,
+    video_length: 0,
+    avg_watch_time: 0,
+    views: 0,
+    likes: 0,
+    comments: 0,
+    shares: 0,
+    saves: 0,
+    follows: 0,
+  });
+
   const sessionId = useState<string>(() => {
     const storedSession = sessionStorage.getItem("session_id");
     if (storedSession) return storedSession;
@@ -27,19 +37,21 @@ const ChatBot: React.FC = () => {
     return newSessionId;
   })[0];
 
-  // 스크롤 동작
   useEffect(() => {
     if (chatLogRef.current) {
       chatLogRef.current.scrollTop = chatLogRef.current.scrollHeight;
     }
   }, [messages]);
 
-  // 채팅 로그를 sessionStorage에 저장
   useEffect(() => {
     sessionStorage.setItem("chat_log", JSON.stringify(messages));
   }, [messages]);
 
-  // analyze API 호출 함수
+  const handleParameterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setParameters((prev) => ({ ...prev, [name]: parseInt(value) || 0 }));
+  };
+
   const callAnalyzeAPI = async () => {
     if (!session?.accessToken) {
       console.error("액세스 토큰이 없습니다.");
@@ -47,17 +59,18 @@ const ChatBot: React.FC = () => {
     }
 
     const reqUrl = "https://api.reelstatics.com/api/v1/reelstatics/analyze";
+
     const payload = {
-      followers: Math.floor(Math.random() * 1000),  
-      elapsed_time: 120, 
-      video_length: userInput.length, 
-      avg_watch_time: 1, 
-      views: Math.floor(Math.random() * 500), 
-      likes: Math.floor(Math.random() * 50),  
-      comments: 0,
-      shares: 0,
-      saves: 0,
-      follows: 2,
+      followers: parameters.followers,
+      elapsed_time: parameters.elapsed_time,
+      video_length: parameters.video_length,
+      avg_watch_time: parameters.avg_watch_time,
+      views: parameters.views,
+      likes: parameters.likes,
+      comments: parameters.comments,
+      shares: parameters.shares,
+      saves: parameters.saves,
+      follows: parameters.follows,
     };
 
     try {
@@ -70,24 +83,15 @@ const ChatBot: React.FC = () => {
         },
       });
       console.log("analyze API 응답:", response.data);
-      return response.data; 
+      return response.data;
     } catch (error) {
       console.error("analyze API 호출 중 오류:", error);
       return null;
     }
   };
 
-  // 사용자 메시지 처리
-  const handleFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!userInput.trim()) return;
-
-    const userMessage = { sender: "사용자", text: userInput };
-    setMessages((prev) => [...prev, userMessage]);
-    setUserInput("");
+  const handleSubmit = async () => {
     setIsLoading(true);
-
-    // POST 요청으로 analyze API 호출 및 결과 받아오기
     const analyzeResult = await callAnalyzeAPI();
 
     if (analyzeResult) {
@@ -101,19 +105,15 @@ const ChatBot: React.FC = () => {
         { sender: "AI", text: "analyze API 응답을 가져오지 못했습니다." },
       ]);
     }
-
     setIsLoading(false);
   };
 
   return (
-    <div
-      id="Chatbot"
-      className="absolute top-[100px] left-0 right-0 bottom-0 flex flex-col max-w-[1280px] h-[calc(100vh-100px)] bg-white overflow-hidden z-10 mx-auto sm:w-[95%]"
-    >
+    <div className="absolute top-[100px] left-0 right-0 bottom-0 flex max-w-[1280px] h-[calc(100vh-100px)] bg-white z-10 mx-auto sm:w-[95%]">
       <div
         id="chat-log"
         ref={chatLogRef}
-        className="flex-grow overflow-y-auto p-4 text-sm leading-6 flex flex-col justify-start"
+        className="w-1/2 p-4 text-sm leading-6 overflow-y-auto border-r"
       >
         {messages.map((msg, index) => (
           <div
@@ -133,25 +133,40 @@ const ChatBot: React.FC = () => {
           </div>
         )}
       </div>
-      <form
-        onSubmit={handleFormSubmit}
-        className="flex p-2 border-t border-gray-300 bg-white items-center"
-      >
-        <textarea
-          value={userInput}
-          onChange={(e) => setUserInput(e.target.value)}
-          placeholder="메시지를 입력하세요"
-          className="flex-grow p-2 rounded-2xl bg-gray-100 focus:outline-none"
-          disabled={isLoading}
-        />
+
+      <div className="w-1/2 p-4 overflow-y-auto">
+        {[
+          "followers",
+          "elapsed_time",
+          "video_length",
+          "avg_watch_time",
+          "views",
+          "likes",
+          "comments",
+          "shares",
+          "saves",
+          "follows",
+        ].map((param) => (
+          <div key={param} className="mb-2">
+            <label className="block mb-1">{param}</label>
+            <input
+              type="number"
+              name={param}
+              value={parameters[param as keyof typeof parameters]}
+              onChange={handleParameterChange}
+              className="w-full p-2 border rounded"
+              placeholder={`Enter ${param}`}
+            />
+          </div>
+        ))}
         <button
-          type="submit"
+          onClick={handleSubmit}
           disabled={isLoading}
-          className="ml-2 px-4 py-2 bg-black text-white rounded-2xl hover:bg-gray-800 transition disabled:bg-gray-400"
+          className="mt-4 w-full bg-black text-white p-2 rounded hover:bg-gray-800 transition disabled:bg-gray-400"
         >
-          {isLoading ? "전송 중..." : "전송"}
+          {isLoading ? "전송 중..." : "데이터 전송"}
         </button>
-      </form>
+      </div>
     </div>
   );
 };

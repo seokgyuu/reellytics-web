@@ -21,6 +21,7 @@ const Header: React.FC = () => {
   const [activePage, setActivePage] = useState<string>("home");
   const [chatHistory, setChatHistory] = useState<ChatHistoryItem[]>([]);
   const [selectedChatDetails, setSelectedChatDetails] = useState<ChatHistoryItem | null>(null);
+  const [selectedTimeRange, setSelectedTimeRange] = useState<number | null>(null); 
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -45,7 +46,7 @@ const Header: React.FC = () => {
 
   const fetchChatHistory = async () => {
     try {
-      const response = await fetch("https://api.reelstatics.com/api/v1/reelstatics/history?limit=30", { // 30개까지
+      const response = await fetch("https://api.reelstatics.com/api/v1/reelstatics/history?limit=30", {
         method: "GET",
         headers: {
           Authorization: session?.accessToken || "",
@@ -65,7 +66,7 @@ const Header: React.FC = () => {
     }
   };
 
-  const patchChatTitle = async (chatId: number, newTitle: string) => {
+  const handleTitleUpdate = async (chatId: number, newTitle: string) => {
     try {
       const response = await fetch(`https://api.reelstatics.com/api/v1/reelstatics/history/${chatId}`, {
         method: "PATCH",
@@ -81,59 +82,116 @@ const Header: React.FC = () => {
         throw new Error(`제목 수정 실패: ${response.statusText}`);
       }
 
-      console.log("제목 수정 성공");
-      return true;
-    } catch (error) {
-      console.error("제목 수정 오류:", error);
-      return false;
-    }
-  };
-
-  const handleTitleUpdate = async (chatId: number, newTitle: string) => {
-    const success = await patchChatTitle(chatId, newTitle);
-    if (success) {
       setChatHistory((prev) =>
         prev.map((item) => (item.id === chatId ? { ...item, title: newTitle } : item))
       );
+
+      console.log("제목 수정 성공");
+    } catch (error) {
+      console.error("제목 수정 오류:", error);
     }
   };
 
-  const fetchChatDetails = (chat: ChatHistoryItem) => {
-    setSelectedChatDetails(chat);
+  const handleRadioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSelectedTimeRange(parseInt(e.target.value));
   };
 
-  const fetchHistoryContents = async (chatId: number) => {
-    const req_url = `https://api.reelstatics.com/api/v1/reelstatics/history/${chatId}`;
-
-    console.log('가져온 url:', req_url);
-
+  const callAnalyzeAPI = async () => {
+    if (selectedTimeRange === null) {
+      alert("시간 범위를 선택하세요!");
+      return;
+    }
+  
+    if (!selectedChatDetails) {
+      alert("상세정보가 없습니다.");
+      return;
+    }
+  
+    // 라디오 버튼 값에서 분 단위로 변환된 elapsed_time
+    const elapsed_time = selectedTimeRange * 60;
+  
+    // 상세정보에서 필요한 데이터 추출 및 payload 생성
+    const content = selectedChatDetails.content || {};
+    const payload = {
+      followers: content["팔로워 수"] && content["팔로워 수"] > 0 ? content["팔로워 수"] : 1,  
+      elapsed_time: elapsed_time,
+      video_length: content["영상 길이"] && content["영상 길이"] > 0 ? content["영상 길이"] : 1,  
+      avg_watch_time: content["평균 시청 유지 시간"] || 1,
+      views: content["조회수"] || 1,  
+      likes: content["좋아요"] || 0,
+      comments: content["댓글"] || 0,
+      shares: content["공유"] || 0,
+      saves: content["저장"] || 0,
+      follows: content["팔로우 증가"] || 0,
+    };
+  
+    console.log("API 요청 payload:", payload); 
+  
     try {
-      const response = await fetch(req_url, {
-        method: 'GET',
+      const response = await fetch("https://api.reelstatics.com/api/v1/reelstatics/analyze", {
+        method: "POST",
         headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Authorization': session?.accessToken || "",
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+  
+      if (!response.ok) {
+        const errorResponse = await response.json();
+        console.error("API 오류 응답:", errorResponse);
+        throw new Error(`API 호출 실패: ${response.statusText}`);
+      }
+  
+      const result = await response.json();
+      console.log("API 응답:", result);
+      alert("API 호출 성공");
+    } catch (error) {
+      console.error("API 호출 중 오류:", error);
+      alert("API 호출 실패");
+    }
+  };
+  
+
+  const fetchHistoryContents = async (chatId: number) => {
+    const reqUrl = `https://api.reelstatics.com/api/v1/reelstatics/history/${chatId}`;
+    try {
+      const response = await fetch(reqUrl, {
+        method: "GET",
+        headers: {
+          Authorization: session?.accessToken || "",
+          Accept: "application/json",
+          "Content-Type": "application/json",
         },
       });
-
+  
       if (!response.ok) {
         throw new Error(`히스토리 콘텐츠 요청 실패: ${response.statusText}`);
       }
-
-      const data = await response.json();
-      console.log('응답 데이터:', data);
-      return data;
+  
+      return await response.json();
     } catch (error) {
-      console.error('가져오는 중 오류:', error);
+      console.error("히스토리 콘텐츠 가져오기 중 오류:", error);
       return null;
     }
   };
+  
 
   const handleHistoryContentFetch = async (chatId: number) => {
     const data = await fetchHistoryContents(chatId);
-    if (data) {
-      console.log('가져온 데이터:', data);
+    if (data && data.status === 200 && Array.isArray(data.result)) {
+      const parsedResults = data.result.map((item: any) => {
+        let parsedContent;
+        try {
+          const cleanContent = item.content.trim().replace(/^json\s*/i, "");
+          parsedContent = JSON.parse(cleanContent);
+        } catch (error) {
+          parsedContent = item.content;
+        }
+        return { ...item, content: parsedContent };
+      });
+
+      setSelectedChatDetails(parsedResults[0]);
     }
   };
 
@@ -146,7 +204,14 @@ const Header: React.FC = () => {
       case "chat":
         return <ChatBot accessToken={session?.accessToken || ""} />;
       case "history":
-        return <History chatHistory={chatHistory} onChatSelect={(chat) => { fetchChatDetails(chat); handleHistoryContentFetch(chat.id); }} onTitleUpdate={handleTitleUpdate} />;
+        return <History
+          chatHistory={chatHistory}
+          onChatSelect={(chat) => { 
+            setSelectedChatDetails(chat); 
+            handleHistoryContentFetch(chat.id); 
+          }}
+          onTitleUpdate={handleTitleUpdate} 
+        />;
       default:
         return <div className="text-center mt-10">뭐 넣을지 고민</div>;
     }
@@ -196,14 +261,50 @@ const Header: React.FC = () => {
 
       <main className="flex-1 p-6">
         {selectedChatDetails ? (
-          <div className="p-4 border rounded shadow">
+          <div className="p-4 border rounded shadow relative z-10 bg-white">
             <h3 className="text-xl font-bold mb-2">채팅 상세 정보</h3>
             <p><strong>채팅 ID:</strong> {selectedChatDetails.id}</p>
             <p><strong>생성일:</strong> {new Date(selectedChatDetails.created_at).toLocaleString()}</p>
             <p><strong>업데이트일:</strong> {new Date(selectedChatDetails.updated_at).toLocaleString()}</p>
             <p><strong>내용 유형:</strong> {selectedChatDetails.content_type}</p>
-            <pre className="bg-gray-100 p-2 rounded mt-2 whitespace-pre-wrap">{selectedChatDetails.content}</pre>
-            <button onClick={() => setSelectedChatDetails(null)} className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">뒤로 가기</button>
+
+            <h4 className="mt-4 font-semibold">Content 상세:</h4>
+            <pre className="bg-gray-100 p-2 rounded whitespace-pre-wrap">
+              {typeof selectedChatDetails.content === "object"
+                ? JSON.stringify(selectedChatDetails.content, null, 2)
+                : selectedChatDetails.content}
+            </pre>
+
+            <div className="mt-6">
+              <h4 className="font-semibold mb-2">시간 범위 선택:</h4>
+              <div className="flex flex-col space-y-2">
+                <label className="flex items-center space-x-2">
+                  <input type="radio" name="timeRange" value="12" className="form-radio h-4 w-4" onChange={handleRadioChange} />
+                  <span>0시간 ~ 24시간</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input type="radio" name="timeRange" value="36" className="form-radio h-4 w-4" onChange={handleRadioChange} />
+                  <span>24시간 ~ 48시간</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input type="radio" name="timeRange" value="60" className="form-radio h-4 w-4" onChange={handleRadioChange} />
+                  <span>48시간 ~ 72시간</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input type="radio" name="timeRange" value="72" className="form-radio h-4 w-4" onChange={handleRadioChange} />
+                  <span>72시간 ~</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="mt-4 flex gap-4">
+              <button onClick={callAnalyzeAPI} className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
+                전송
+              </button>
+              <button onClick={() => setSelectedChatDetails(null)} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                뒤로 가기
+              </button>
+            </div>
           </div>
         ) : (
           renderContent()
