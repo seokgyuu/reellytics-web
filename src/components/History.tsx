@@ -6,7 +6,7 @@ interface HistoryItem {
   created_at: string;
   updated_at: string;
   content_type: string;
-  content?: string;  // 선택적 속성
+  content?: string; 
 }
 
 interface HistoryProps {

@@ -100,7 +100,7 @@ const Header: React.FC = () => {
     }
   };
 
-  // 채팅 히스토리 개별 아이템 조회
+  // 채팅 히스토리
   const fetchChatDetails = (chat: ChatHistoryItem) => {
     setSelectedChatDetails(chat);
   };
