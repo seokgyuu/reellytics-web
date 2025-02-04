@@ -1,30 +1,39 @@
+import {
+	NextAuthSession,
+	authOptions,
+} from '@/app/api/auth/[...nextauth]/route';
+import { getServerSession } from 'next-auth';
 
-export default async function fetchWithToken(
-  url: string,
-  accessToken: string | null,
-  init?: RequestInit
-) {
-  if (!accessToken) {
-    throw new Error('유효한 액세스 토큰이 없습니다.');
-  }
-
-  try {
-    const response = await fetch(url, {
-      ...init,
-      headers: {
-        ...init?.headers,
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`API 요청 실패: ${response.status}`);
+async function fetchWithToken(url: string, init?: { headers?: {} }) {
+    try{
+        const session = (await getServerSession(
+            authOptions,
+        )) as NextAuthSession | null;
+        
+        if (session === null) {
+            return null;
+        }
+        const commonHeaders = {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session?.accessToken}`,
+        };
+    
+        const response = await fetch(url, {
+            ...init,
+            headers: {
+                ...init?.headers,
+                ...commonHeaders,
+            },
+        });
+    
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+    
+        return response.json();
+    }catch(e){
+        return "Logout status"
     }
-
-    return await response.json();
-  } catch (error) {
-    console.error('API 요청 중 오류 발생:', error);
-    throw new Error('API 요청 중 문제가 발생했습니다.');
-  }
 }
+
+export default fetchWithToken;
