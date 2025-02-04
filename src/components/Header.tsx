@@ -9,19 +9,22 @@ import History from "@/components/History";
 
 interface ChatHistoryItem {
   id: number;
-  title: string;
   created_at: string;
   updated_at: string;
+  content_type: string;
+  content: string;
+  title?: string;
 }
 
 const Header: React.FC = () => {
   const { data: session } = useSession();
   const [activePage, setActivePage] = useState<string>("home");
   const [chatHistory, setChatHistory] = useState<ChatHistoryItem[]>([]);
+  const [selectedChatDetails, setSelectedChatDetails] = useState<ChatHistoryItem | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);  
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // 히스토리 
+  // 히스토리 가져오기
   useEffect(() => {
     if (session?.accessToken) {
       fetchChatHistory();
@@ -41,7 +44,7 @@ const Header: React.FC = () => {
     };
   }, []);
 
-  // 채팅 히스토리
+  // 채팅 히스토리 불러오기
   const fetchChatHistory = async () => {
     try {
       const response = await fetch("https://api.reelstatics.com/api/v1/reelstatics/history", {
@@ -64,7 +67,6 @@ const Header: React.FC = () => {
     }
   };
 
-  // 제목 수정 
   const patchChatTitle = async (chatId: number, newTitle: string) => {
     try {
       const response = await fetch(`https://api.reelstatics.com/api/v1/reelstatics/history/${chatId}`, {
@@ -89,7 +91,6 @@ const Header: React.FC = () => {
     }
   };
 
-  // 제목 수정 
   const handleTitleUpdate = async (chatId: number, newTitle: string) => {
     const success = await patchChatTitle(chatId, newTitle);
     if (success) {
@@ -99,7 +100,12 @@ const Header: React.FC = () => {
     }
   };
 
-  // 렌더링할 페이지 
+  // 채팅 히스토리 개별 아이템 조회
+  const fetchChatDetails = (chat: ChatHistoryItem) => {
+    setSelectedChatDetails(chat);
+  };
+
+  // 렌더링할 페이지
   const renderContent = () => {
     switch (activePage) {
       case "privacy-policy":
@@ -109,7 +115,7 @@ const Header: React.FC = () => {
       case "chat":
         return <ChatBot accessToken={session?.accessToken || ""} />;
       case "history":
-        return <History chatHistory={chatHistory} onTitleUpdate={handleTitleUpdate} />;
+        return <History chatHistory={chatHistory} onChatSelect={fetchChatDetails} onTitleUpdate={handleTitleUpdate} />;
       default:
         return <div className="text-center mt-10">뭐 넣을지 고민</div>;
     }
@@ -157,7 +163,21 @@ const Header: React.FC = () => {
         )}
       </header>
 
-      <main className="flex-1 p-6">{renderContent()}</main>
+      <main className="flex-1 p-6">
+        {selectedChatDetails ? (
+          <div className="p-4 border rounded shadow">
+            <h3 className="text-xl font-bold mb-2">채팅 상세 정보</h3>
+            <p><strong>채팅 ID:</strong> {selectedChatDetails.id}</p>
+            <p><strong>생성일:</strong> {new Date(selectedChatDetails.created_at).toLocaleString()}</p>
+            <p><strong>업데이트일:</strong> {new Date(selectedChatDetails.updated_at).toLocaleString()}</p>
+            <p><strong>내용 유형:</strong> {selectedChatDetails.content_type}</p>
+            <pre className="bg-gray-100 p-2 rounded mt-2 whitespace-pre-wrap">{selectedChatDetails.content}</pre>
+            <button onClick={() => setSelectedChatDetails(null)} className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">뒤로 가기</button>
+          </div>
+        ) : (
+          renderContent()
+        )}
+      </main>
     </div>
   );
 };
