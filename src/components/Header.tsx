@@ -6,6 +6,8 @@ import PrivacyPolicy from "@/app/privacy-policy/page";
 import TermOfService from "@/app/term-of-service/page";
 import ChatBot from "@/components/ChatBot";
 import History from "@/components/History";
+import ReactMarkdown from "react-markdown";
+import { json } from "body-parser";
 
 interface ChatHistoryItem {
   id: number;
@@ -165,11 +167,60 @@ const Header: React.FC = () => {
       const result = await response.json();
       setApiResult(result); 
       alert("분석이 완료되었습니다!");
+     
+      setSelectedChatDetails((prev) => {
+        if (!prev) return prev;
+  
+        // 이전 content가 문자열일 경우 JSON 파싱 시도
+        let updatedContent;
+        if (typeof prev.content === "string") {
+          try {
+            updatedContent = JSON.parse(prev.content);
+          } catch {
+            updatedContent = prev.content;
+          }
+        } else {
+          updatedContent = prev.content;
+        }
+  
+        // 결과를 배열로 추가하거나 병합
+        const newContent = Array.isArray(updatedContent)
+          ? [...updatedContent, { type: "추가 분석", result }]
+          : [updatedContent, { type: "추가 분석", result }];
+  
+        return {
+          ...prev,
+          updated_at: new Date().toISOString(),
+          content: newContent,
+        };
+      });
+  
+      // 서버에 업데이트 (선택사항)
+      await updateChatOnServer(selectedChatDetails.id, result);
+  
     } catch (error) {
       console.error("분석 API 호출 오류:", error);
       alert("API 호출 중 오류 발생");
     } finally {
       setIsLoading(false);
+    }
+  };
+  
+  // 서버에 병합된 데이터 업데이트
+  const updateChatOnServer = async (chatId: number, newContent: any) => {
+    try {
+      await fetch(`https://api.reelstatics.com/api/v1/reelstatics/history/${chatId}`, {
+        method: "PATCH",
+        headers: {
+          Authorization: session?.accessToken || "",
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ content: newContent }),
+      });
+      console.log("서버 업데이트 성공");
+    } catch (error) {
+      console.error("서버 업데이트 실패:", error);
     }
   };
 
@@ -329,11 +380,36 @@ const Header: React.FC = () => {
   
             {apiResult && (
               <div className="mt-4 p-4 bg-green-100 rounded">
-                <h4>추가된 API 응답:</h4>
-                <pre className="whitespace-pre-wrap">
+                <h4>추가 답변:</h4>
+                <ReactMarkdown className="whitespace-pre-wrap">
                   {JSON.stringify(apiResult, null, 2)}
-                </pre>
-              </div>)}
+                </ReactMarkdown>
+
+                {/* 이전 결과와 병합 */}
+                <button 
+                  className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                  onClick={() => {
+                    if (selectedChatDetails) {
+                      const updatedContent = Array.isArray(selectedChatDetails.content)
+                        ? [...selectedChatDetails.content, { type: "추가 분석", result: apiResult }]
+                        : [selectedChatDetails.content, { type: "추가 분석", result: apiResult }];
+
+                      // 상태 업데이트
+                      setSelectedChatDetails({
+                        ...selectedChatDetails,
+                        updated_at: new Date().toISOString(),
+                        content: updatedContent,
+                      });
+
+                      alert("추가 답변이 저장되었습니다.");
+                    }
+                  }}
+                >
+                  답변 저장
+                </button>
+              </div>
+            )}
+
             <h4 className="mt-4 font-semibold">파라미터 입력:</h4>
             {Object.keys(parameters).map((param) => (
               <div key={param} className="mb-2">
@@ -347,9 +423,9 @@ const Header: React.FC = () => {
                 />
               </div>
             ))}
-  
+
             <div className="mt-6">
-              <h4 className="font-semibold mb-2">시간 범위 선택:</h4>
+              <h4 className="font-semibold mb-2">요청 후 지난 시간:</h4>
               <div className="flex flex-col space-y-2">
                 <label className="flex items-center space-x-2">
                   <input type="radio" name="timeRange" value="12" className="form-radio h-4 w-4" onChange={handleRadioChange} />
@@ -369,22 +445,22 @@ const Header: React.FC = () => {
                 </label>
               </div>
             </div>
-  
+
             <div className="mt-4 flex gap-4">
-                <button 
-                  onClick={callAnalyzeAPI} 
-                  disabled={isLoading} 
-                  className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-                >
-                  {isLoading ? "전송 중..." : "데이터 전송"}
-                </button>
-                <button 
-                  onClick={() => setSelectedChatDetails(null)} 
-                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                >
-                  뒤로 가기
-                </button>
-              </div>
+              <button 
+                onClick={callAnalyzeAPI} 
+                disabled={isLoading} 
+                className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+              >
+                {isLoading ? "전송 중..." : "데이터 전송"}
+              </button>
+              <button 
+                onClick={() => setSelectedChatDetails(null)} 
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                뒤로 가기
+              </button>
+            </div>
           </div>
         ) : (
           renderContent()
