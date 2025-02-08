@@ -14,7 +14,9 @@ interface ChatHistoryItem {
   created_at: string;
   updated_at: string;
   content_type: string;
-  content: string;
+  content: {
+    [key: string]: number; // 모든 key가 string이고 value는 number
+  };
   title?: string;
 }
 
@@ -170,30 +172,25 @@ const Header: React.FC = () => {
      
       setSelectedChatDetails((prev) => {
         if (!prev) return prev;
-  
-        // 이전 content가 문자열일 경우 JSON 파싱 시도
-        let updatedContent;
-        if (typeof prev.content === "string") {
-          try {
-            updatedContent = JSON.parse(prev.content);
-          } catch {
-            updatedContent = prev.content;
-          }
-        } else {
-          updatedContent = prev.content;
-        }
-  
-        // 결과를 배열로 추가하거나 병합
-        const newContent = Array.isArray(updatedContent)
-          ? [...updatedContent, { type: "추가 분석", result }]
-          : [updatedContent, { type: "추가 분석", result }];
-  
+      
+        // 새로 추가할 분석 결과를 객체로 변환
+        const additionalResult: { [key: string]: number } = {
+          [`추가 분석_${new Date().toISOString()}`]: result.someNumericValue || 0,
+        };
+      
+        // 기존 content와 새 분석 결과를 병합
+        const newContent = {
+          ...prev.content,
+          ...additionalResult,
+        };
+      
         return {
           ...prev,
           updated_at: new Date().toISOString(),
-          content: newContent,
+          content: newContent, // 객체로 병합된 content
         };
       });
+      
   
       // 서버에 업데이트 (선택사항)
       await updateChatOnServer(selectedChatDetails.id, result);
@@ -387,26 +384,31 @@ const Header: React.FC = () => {
 
                 {/* 이전 결과와 병합 */}
                 <button 
-                  className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                  onClick={() => {
-                    if (selectedChatDetails) {
-                      const updatedContent = Array.isArray(selectedChatDetails.content)
-                        ? [...selectedChatDetails.content, { type: "추가 분석", result: apiResult }]
-                        : [selectedChatDetails.content, { type: "추가 분석", result: apiResult }];
+                    className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                    onClick={() => {
+                  if (selectedChatDetails) {
+                    // 새로 추가할 분석 결과
+                    const additionalResult: { [key: string]: number } = {
+                      [`추가 분석_${new Date().toISOString()}`]: apiResult.someNumericValue || 0,
+                    };
+                    // content 객체에 새 데이터를 병합
+                    const updatedContent = {
+                      ...selectedChatDetails.content,
+                      ...additionalResult,
+                    };
+                    // 상태 업데이트
+                    setSelectedChatDetails({
+                      ...selectedChatDetails,
+                      updated_at: new Date().toISOString(),
+                      content: updatedContent,
+                    });
 
-                      // 상태 업데이트
-                      setSelectedChatDetails({
-                        ...selectedChatDetails,
-                        updated_at: new Date().toISOString(),
-                        content: updatedContent,
-                      });
-
-                      alert("추가 답변이 저장되었습니다.");
-                    }
-                  }}
-                >
-                  답변 저장
-                </button>
+                    alert("추가 답변이 저장되었습니다.");
+                  }
+                }}
+              >
+                답변 저장
+              </button>
               </div>
             )}
 

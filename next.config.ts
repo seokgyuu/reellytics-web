@@ -1,5 +1,6 @@
 const nextConfig = {
   reactStrictMode: true,
+  output: "standalone",
   env: {
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
     KEYCLOAK_ID: process.env.KEYCLOAK_ID,

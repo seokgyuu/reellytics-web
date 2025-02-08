@@ -5,7 +5,11 @@ import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 import { useSession } from "next-auth/react";
 
-const ChatBot: React.FC = () => {
+interface ChatBotProps {
+  accessToken: string;
+}
+
+const ChatBot: React.FC<ChatBotProps> = ({ accessToken }) => {
   const chatLogRef = useRef<HTMLDivElement>(null);
   const { data: session } = useSession();
   const [messages, setMessages] = useState<{ sender: string; text: string }[]>(() => {

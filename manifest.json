@@ -1,0 +1,15 @@
+{
+    "manifest_version": 3,
+    "name": "Reellytics Extension",
+    "version": "1.0",
+    "description": "instagram chatbot",
+    "permissions": ["storage", "scripting", "activeTab", "tabs", "identity"],
+    "host_permissions": ["https://*/*"],
+    "background": {
+      "service_worker": "background.js"
+    },
+    "action": {
+      "default_popup": "index.html"
+    }
+  }
+  

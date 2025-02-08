@@ -54,7 +54,6 @@ const config: Config = {
   darkMode: "class", 
   plugins: [
     forms, 
-    lineClamp, 
     typography, 
   ],
 };
